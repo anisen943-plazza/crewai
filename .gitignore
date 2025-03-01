@@ -1,0 +1,8 @@
+/*.md
+CrewAI.code-workspace
+venv/
+.ds_store
+__pycache__/
+/*.docx
+
+
