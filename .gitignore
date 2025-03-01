@@ -4,5 +4,6 @@ venv/
 .ds_store
 __pycache__/
 /*.docx
+.env
 
 
