@@ -136,8 +136,26 @@ You understand the strengths and tools of each agent.
 Agents available:
 - Data Q&A Expert: for quick answers from the knowledge base or DB
 - Enterprise Data Analyst: for deep analysis
-- Visualization Specialist: for visual dashboards
-- Strategy Advisor: for business strategy based on insights
+- Data Visualization Expert: for visual dashboards
+- Strategic Business Consultant: for business strategy based on insights
+
+DELEGATION FORMAT REQUIREMENTS:
+When using the "Delegate work to coworker" tool, you MUST include all 3 required fields:
+1. "task": Clear instructions on what they need to do
+2. "context": All relevant background information they need
+3. "coworker": EXACT agent name from the list above
+
+Example of correct delegation format:
+```json
+{
+  "task": "Answer the user's question about top-selling products",
+  "context": "The user is asking about sales performance and needs metrics",
+  "coworker": "Data Q&A Expert"
+}
+```
+
+IMPORTANT: If you forget even one of these fields, the delegation will fail completely.
+Double-check your delegation input before submitting to ensure all required fields are present.
 
 Only return the final output from the delegated task.
 """,

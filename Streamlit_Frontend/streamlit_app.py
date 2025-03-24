@@ -4,6 +4,7 @@ import os
 import json
 from pathlib import Path
 import sys
+import time
 
 # Setup module path for Core_Scripts access
 parent_dir = Path(__file__).resolve().parent.parent
@@ -14,7 +15,7 @@ core_scripts_dir = parent_dir / "Core_Scripts"
 if core_scripts_dir.exists() and str(core_scripts_dir) not in sys.path:
     sys.path.append(str(core_scripts_dir))
 
-# Debug import paths
+# Print Python import paths for debugging
 print("Python import paths:")
 for p in sys.path:
     print(f"- {p}")
@@ -68,7 +69,7 @@ def check_kb_freshness():
     except Exception as e:
         print(f"Error reading KB file: {e}")
     
-    # Fallback to file modification time if no timestamp found in content
+    # Fallback to file modification time if no timestamp found
     if not timestamp:
         try:
             timestamp = datetime.fromtimestamp(KB_FILE.stat().st_mtime)
@@ -150,42 +151,43 @@ chat_mode = st.radio("Select Chat Mode:", ["🧠 AI Orchestrator", "⚡ Fast Cha
 st.markdown("---")
 
 # ---- User Input ----
-with st.form("chat_form"):
-    user_input = st.text_input("Ask a question:")
-    submitted = st.form_submit_button("Submit")
+# Using a form to enable Enter key submission
+with st.form(key="chat_form"):
+    query = st.text_input("Ask a question:")
+    submit_button = st.form_submit_button("Submit")
 
-# ---- Handle Submission ----
-if submitted and user_input:
-    with st.spinner("Processing your request..."):
-        try:
-            if chat_mode == "🧠 AI Orchestrator":
-                try:
-                    from Core_Scripts.advanced_router import run_advanced_router
-                except ImportError as e:
-                    st.error(f"Error importing Advanced Router: {e}")
-                    st.info("Check that Core_Scripts directory is properly configured.")
-                    st.stop()
+if submit_button and query:
+        with st.spinner("Processing your request..."):
+            try:
+                if chat_mode == "🧠 AI Orchestrator":
+                    try:
+                        from Core_Scripts.advanced_router import run_advanced_router
+                    except ImportError as e:
+                        st.error(f"Error importing Advanced Router: {e}")
+                        st.info("Check that Core_Scripts directory is properly configured.")
+                        st.stop()
+                    
+                    result = run_advanced_router(query)
+                else:
+                    try:
+                        from Core_Scripts.plazza_chat import PlazzaChat
+                    except ImportError as e:
+                        st.error(f"Error importing PlazzaChat: {e}")
+                        st.info("Check that Core_Scripts directory is properly configured.")
+                        st.stop()
+                    
+                    chat_handler = PlazzaChat()
+                    result = chat_handler.run_chat(query)
                 
-                result = run_advanced_router(user_input)
-            else:
-                try:
-                    from Core_Scripts.plazza_chat import PlazzaChat
-                except ImportError as e:
-                    st.error(f"Error importing PlazzaChat: {e}")
-                    st.info("Check that Core_Scripts directory is properly configured.")
-                    st.stop()
-                
-                chat_handler = PlazzaChat()
-                result = chat_handler.run_chat(user_input)
-            
-            st.session_state["last_input"] = user_input
-            st.session_state["last_result"] = result
-            st.success("Query processed successfully!")
-        except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
-            import traceback
-            st.code(traceback.format_exc())
-            st.stop()
+                # Store results in session state
+                st.session_state["last_input"] = query
+                st.session_state["last_result"] = result
+                st.success("Query processed successfully!")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
+                st.stop()
 
 # ---- Sidebar Status ----
 with st.sidebar:
@@ -230,8 +232,8 @@ with st.sidebar:
 
 # ---- Main Content Area ----
 
-# Show result if we just submitted a query
-if submitted and "last_result" in st.session_state:
+# Show result if we just processed a query
+if "last_result" in st.session_state:
     st.markdown("### 🧠 Chat Result")
     st.markdown(st.session_state["last_result"])
 # Otherwise show last chat result from file

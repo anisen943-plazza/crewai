@@ -58,3 +58,6 @@ logs/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+#CrewAI suggestions
+CrewAI_Assistant_suggestions.txt

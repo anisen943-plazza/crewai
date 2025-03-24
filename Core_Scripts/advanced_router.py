@@ -68,10 +68,10 @@ def run_advanced_router(user_query):
     
     # The router agent will dynamically create a task and delegate it
     router_task = Task(
-        description=f"""
+        description="""
 You are given the following user request:
 
-"{user_query}"
+"{user_input}"
 
 1. Classify what kind of task this is:
    - Quick Q&A from KB or DB
@@ -79,11 +79,25 @@ You are given the following user request:
    - Visualization/chart generation
    - Strategic business recommendation
 
-2. Choose the best specialist agent to handle this.
+2. Choose the best specialist agent to handle this:
+   - Data Q&A Expert: for quick answers from the knowledge base or DB
+   - Enterprise Data Analyst: for deep analysis
+   - Data Visualization Expert: for visual dashboards
+   - Strategic Business Consultant: for business strategy based on insights
 
 3. Construct a task for that agent with clear instructions.
 
-4. Delegate it using CrewAI delegation.
+4. Delegate it using CrewAI delegation. When you use the delegation tool, the input **MUST** be a valid JSON object that includes all three required fields:
+
+```json
+{
+  "task": "Do something specific",
+  "context": "Everything they need to know in detail",
+  "coworker": "Data Q&A Expert" 
+}
+```
+
+   IMPORTANT: All three fields (task, context, and coworker) are REQUIRED. If you forget even one, the delegation will fail completely.
 
 5. Evaluate the response quality:
    - Does it directly answer the user's question?
@@ -122,19 +136,26 @@ comprehensively with specific metrics. No follow-up required. -->
     print(f"🔄 Routing request to the appropriate specialist...\n")
     
     try:
-        result = crew.kickoff(inputs={"user_input": user_query})
+        # Make sure task variable is provided 
+        result = crew.kickoff(inputs={"user_input": user_query, "task": user_query})
+        
+        # Convert CrewOutput to string if needed
+        if hasattr(result, "raw_output"):
+            result_str = result.raw_output
+        else:
+            result_str = str(result)
         
         # Extract self-evaluation from response if present
         self_evaluation = None
-        user_response = result
+        user_response = result_str
         
         # Use regex to extract the self-evaluation comment
         import re
-        eval_match = re.search(r'<!--\s*(Self-evaluation:.*?)-->', result, re.DOTALL)
+        eval_match = re.search(r'<!--\s*(Self-evaluation:.*?)-->', result_str, re.DOTALL)
         if eval_match:
             self_evaluation = eval_match.group(1).strip()
             # Remove the evaluation from user-facing response
-            user_response = re.sub(r'<!--\s*Self-evaluation:.*?-->', '', result, flags=re.DOTALL).strip()
+            user_response = re.sub(r'<!--\s*Self-evaluation:.*?-->', '', result_str, flags=re.DOTALL).strip()
         
         # Save both the original query, cleaned response, and extracted evaluation
         save_conversation(user_query, user_response, self_evaluation)
