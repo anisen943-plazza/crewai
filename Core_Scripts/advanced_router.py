@@ -114,7 +114,7 @@ comprehensively with specific metrics. No follow-up required. -->
         agents=[router, chat_qa, analyst, visualizer, strategist],
         tasks=[router_task],
         process=Process.sequential,
-        verbose=2
+        verbose=True  # Changed from 2 to True to fix validation error
     )
     
     # Execute the crew
