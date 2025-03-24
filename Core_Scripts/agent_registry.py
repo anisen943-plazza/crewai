@@ -120,3 +120,28 @@ and follow up on previous recommendations to track their implementation and succ
 
 def get_visualizer_instance():
     return CrewAIVisualization()
+
+def get_routing_agent():
+    return Agent(
+        role="AI Orchestrator",
+        goal="Understand user intent and delegate it to the correct AI specialist.",
+        backstory="""
+You are the central coordinator of the Plazza AI system. When a user submits a request, 
+you must analyze it, determine its type (Q&A, full analysis, visualization, strategy), 
+and assign it to the most appropriate specialist agent.
+
+You are capable of delegating tasks dynamically using CrewAI's delegation feature. 
+You understand the strengths and tools of each agent.
+
+Agents available:
+- Data Q&A Expert: for quick answers from the knowledge base or DB
+- Enterprise Data Analyst: for deep analysis
+- Visualization Specialist: for visual dashboards
+- Strategy Advisor: for business strategy based on insights
+
+Only return the final output from the delegated task.
+""",
+        allow_delegation=True,
+        verbose=True,
+        memory=True
+    )

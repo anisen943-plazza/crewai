@@ -2429,6 +2429,91 @@ VISUALIZATION_OUTPUT_DIR=/path/to/custom/visuals/directory
 OPENAI_API_KEY=your-api-key
 ```
 
+### Advanced Routing Implementation (March 29, 2025)
+
+1. **Intelligent Query Routing System**:
+   - Added `get_routing_agent()` to agent_registry.py as a centralized orchestrator
+   - Created `advanced_router.py` with dynamic task delegation capabilities
+   - Implemented intent-based classification of user queries
+   - Added automatic routing to appropriate specialist agents
+   - Created conversation logging with metadata tracking
+   - Enhanced user experience with interactive CLI
+
+2. **Advanced Routing Architecture**:
+   - **Central Orchestrator**: AI Orchestrator agent with routing intelligence
+   - **Dynamic Task Construction**: Creates specialized tasks based on query intent
+   - **Delegation Framework**: Uses CrewAI's delegation system to pass tasks to specialists
+   - **Specialist Agents**: Data Q&A Expert, Enterprise Data Analyst, Visualization Specialist, Strategy Advisor
+   - **Transparent Output Handling**: Only returns the final specialist response without orchestration details
+   - **Conversational Memory**: Implements agent memory for context retention
+
+3. **Routing Capabilities**:
+   - **Q&A Routing**: Directs quick database questions to the Data Q&A Expert
+   - **Analysis Routing**: Sends deep analysis requests to the Enterprise Data Analyst
+   - **Visualization Routing**: Directs chart and dashboard requests to the Visualization Specialist
+   - **Strategy Routing**: Sends business strategy queries to the Strategy Advisor
+   - **Hybrid Request Handling**: Intelligently decomposes complex multi-part requests
+
+4. **Implementation Details**:
+   ```python
+   # Router agent definition in agent_registry.py
+   def get_routing_agent():
+       return Agent(
+           role="AI Orchestrator",
+           goal="Understand user intent and delegate it to the correct AI specialist.",
+           backstory="""
+   You are the central coordinator of the Plazza AI system. When a user submits a request, 
+   you must analyze it, determine its type (Q&A, full analysis, visualization, strategy), 
+   and assign it to the most appropriate specialist agent.
+   
+   You are capable of delegating tasks dynamically using CrewAI's delegation feature. 
+   You understand the strengths and tools of each agent.
+   
+   Agents available:
+   - Data Q&A Expert: for quick answers from the knowledge base or DB
+   - Enterprise Data Analyst: for deep analysis
+   - Visualization Specialist: for visual dashboards
+   - Strategy Advisor: for business strategy based on insights
+   
+   Only return the final output from the delegated task.
+   """,
+           allow_delegation=True,
+           verbose=True,
+           memory=True
+       )
+   ```
+
+5. **Enhanced Error Handling**:
+   - Added robust exception handling for routing errors
+   - Implemented clear error messaging for users
+   - Created fallback mechanisms for failed delegations
+   - Added complete conversation logging for debugging
+
+6. **Usage**:
+   ```bash
+   # Run the advanced router interface
+   python Core_Scripts/advanced_router.py
+   
+   # Example queries:
+   # "What are the top-selling products this quarter?"
+   # "Give me a dashboard showing repeat customers."
+   # "What strategy should we use to reduce churn?"
+   ```
+
+7. **Files Modified**:
+   - Added routing agent to `/Core_Scripts/agent_registry.py`
+   - Created new `/Core_Scripts/advanced_router.py`
+   - Added router logs directory `/Run_Results/router_logs/`
+   - Updated `/CLAUDE.md` with documentation
+
+8. **Benefits**:
+   - **Improved User Experience**: Single entry point for all query types
+   - **Reduced Cognitive Load**: Users don't need to know which agent to use
+   - **More Accurate Agent Selection**: AI-powered routing based on intent
+   - **Better Debugging**: Complete conversation logging for troubleshooting
+   - **Extensible Architecture**: Easy to add new specialist agents
+   - **Enhanced Context Retention**: Memory implementation for conversation history
+
 ### System Enhancement Summary (March 28, 2025)
 
 This section provides a comprehensive overview of all major enhancements implemented across the system in March 2025, with integration details and architectural patterns.

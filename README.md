@@ -14,6 +14,7 @@ This project combines CrewAI with CockroachDB to create an AI-powered data analy
 - **crewai_visualization.py**: Enhanced visualization capabilities
 
 ### Agent Hierarchy
+- **AI Orchestrator**: Central router that delegates tasks based on intent
 - **Data Q&A Expert** (Primary chat agent): KB-first approach with specialized tools
 - **Enterprise Data Analyst**: Deep analysis with database discovery
 - **Visualization Specialist**: Creates charts and dashboards from KB data
@@ -89,9 +90,11 @@ This project combines CrewAI with CockroachDB to create an AI-powered data analy
 
 ## Usage Examples
 
-### Interactive Chat Interface
+### Interactive Chat Interfaces
+
+#### Standard Chat Interface
 ```bash
-# Run the interactive chat interface
+# Run the standard chat interface
 python Core_Scripts/plazza_chat.py
 
 # Common commands in the chat interface:
@@ -99,6 +102,20 @@ python Core_Scripts/plazza_chat.py
 # "what were our top products last month?" - Simple query mode
 # "visualize the last analysis" - Generate visualizations
 # "create a strategy for improving sales" - Generate business strategy
+```
+
+#### Advanced Router Interface (NEW)
+```bash
+# Run the advanced router with intelligent query delegation
+python Core_Scripts/advanced_router.py
+
+# Just ask any question naturally:
+# "What are our top-selling products this quarter?"
+# "Give me a dashboard showing repeat customers"
+# "What strategy should we use to reduce customer churn?"
+# "Analyze our sales performance compared to last year"
+
+# The system will automatically route your query to the appropriate specialist
 ```
 
 ### Data Analysis
