@@ -197,10 +197,13 @@ Required environment variables:
 A Streamlit-based web interface is available in the `/Streamlit_Frontend` directory.
 
 ### Features
-- Dual chat interface (Standard Chat and Advanced Router)
+- Unified interface with mode selection (Standard Chat and Advanced Router)
+- Form-based input with Enter key submission support
 - System status dashboard with knowledge base freshness monitoring
 - Visualization display for generated charts
-- Router logs and performance metrics
+- Router logs with self-evaluation metrics
+- Comprehensive error handling and debugging
+- Session state for persistent results
 
 ### Running the Web Interface
 ```bash
