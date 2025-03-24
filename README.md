@@ -2,75 +2,180 @@
 
 ## Project Overview
 
-This project combines CrewAI with CockroachDB to create an AI-powered data analysis system for the Plazza ecosystem (a retail/pharmaceutical platform). The system includes database schema documentation generation, AI-driven data analysis, and API documentation tools.
+This project combines CrewAI with CockroachDB to create an AI-powered data analysis system for the Plazza ecosystem (a retail/pharmaceutical platform). The system implements a fully modular, tool-based architecture with clearly separated responsibilities for database schema discovery, data analysis, visualization, and strategic recommendations.
 
-## Enhanced Features
+## System Architecture
 
-### 1. RAG Integration
-The system has been enhanced with RAG (Retrieval-Augmented Generation) capabilities to provide knowledge persistence across analysis runs. This allows agents to reference past analyses and build upon prior findings.
+### Core Modules
+- **agent_registry.py**: Centralized factory for all agents and tools
+- **plazza_analytics.py**: Data analysis and visualization functionality
+- **plazza_strategy.py**: Business strategy recommendations
+- **plazza_chat.py**: User interface and query routing
+- **crewai_visualization.py**: Enhanced visualization capabilities
 
-### 2. Data Visualization
-The system now includes comprehensive visualization capabilities:
-- Bar charts for product sales analysis
-- Pie charts for customer retention metrics
-- Interactive dashboards for business metrics
-- Automated visualization generation integrated with analysis results
+### Agent Hierarchy
+- **Data Q&A Expert** (Primary chat agent): KB-first approach with specialized tools
+- **Enterprise Data Analyst**: Deep analysis with database discovery
+- **Visualization Specialist**: Creates charts and dashboards from KB data
+- **Business Strategy Advisor**: Strategic recommendations based on KB insights
 
-### 3. Human-Readable Insights
-- Product names instead of IDs in all analyses
-- Test data filtering to ensure accurate business insights
-- Structured output format optimized for visualization
-- Enhanced metadata and context in analysis results
+### Tool Composition
+- **CockroachDBTool**: SQL query execution across databases
+- **RetentionAnalysisTool**: Customer retention metrics calculation
+- **MethodologyTool**: Structured query execution with documentation
+- **VisualizationTool**: Visual representation of analysis results
+- **Specialized Chart Tools**: TopProductsChartTool, CustomerRetentionChartTool, etc.
 
-### 4. Advanced Retention Analysis
-- Enhanced customer segmentation
-- Time-between-purchase metrics
-- Product categories driving repeat purchases
-- Correlation between discounts and customer retention
+## Key Features
 
-## Components
+### Knowledge-First Architecture
+- RAG-powered knowledge retrieval to minimize database queries
+- Append-only knowledge storage with timestamp tracking
+- Intelligent routing between KB access and fresh analysis
+- Transparent methodology documentation with query tracking
 
-### Core Files
-- `sales_ai.py`: Main analysis system with RAG integration and visualization
-- `crewai_visualization.py`: Visualization module for creating charts and dashboards
-- `knowledge/sales_analysis_results.md`: Persistent knowledge store for RAG
+### Enhanced Visualization System
+- Interactive dashboards with Plazza branding
+- Flexible input handling (file paths or direct content)
+- Multiple chart types (product sales, customer retention, metrics)
+- Specialized visualization tools for different data types
+- Both HTML and PNG output formats
 
-### Tools
-- `CockroachDBTool`: Enhanced with product name extraction and test data filtering
-- `PreviousAnalysisTool`: Access to historical analysis results
-- `CrewAIVisualization`: Class for creating visualizations from analysis results
+### Agent Delegation Framework
+- Allows agents to request information from other agents
+- Automatic logging of generated strategies with timestamps
+- Cross-agent communication using CrewAI's delegation framework
+- Structured metadata for better traceability
 
-### Visualization Types
-- Product sales bar charts
-- Customer retention pie charts
-- Business metrics dashboards
-- Interactive HTML visualizations
+### Batch Analysis System
+- Knowledge Base freshness checking to avoid redundant analysis
+- Batch mode for scheduled execution via cron
+- Command-line interface with flexible options
+- Output persistence with timestamped file naming
 
-## Usage
+## Project Structure
 
+- **/Core_Scripts/**: Main application scripts (core system)
+  - `agent_registry.py` - Centralized repository of agent definitions and tools
+  - `crewai_visualization.py` - Core visualization module with chart generation
+  - `plazza_analytics.py` - Main analysis script with database tools and tasks
+  - `plazza_chat.py` - Interactive chat interface for database queries
+  - `plazza_strategy.py` - Business strategy generation module
+  - `tests/` - Test suite for Core_Scripts functionality
+
+- **/Claude_Scripts/**: Contains helper scripts, debugging tools, and experimental implementations
+  - Various database schema exploration scripts
+  - Debugging tools and visualization demos
+  - Experimental implementations
+
+- **/Ref_documents/**: Reference materials and API documentation
+  - API documentation for various services
+  - Database schema JSON files
+  - Sample files and templates
+
+- **/Run_Results/**: Storage for analysis outputs
+  - Analysis results with timestamped filenames
+  - Strategy documents and reports
+  - Chat logs and conversation history
+
+- **/knowledge/**: RAG knowledge store
+  - `sales_analysis_results.md` - Persistent storage of analysis for RAG
+  - Used by CrewAI's knowledge retrieval system
+
+- **/visuals/**: Visualization outputs
+  - HTML dashboards with interactive elements
+  - PNG exports for embedding in documentation
+  - Each visualization named with timestamp for tracking
+
+## Usage Examples
+
+### Interactive Chat Interface
 ```bash
-# Install dependencies
-pip install -r requirements_db_doc.txt
+# Run the interactive chat interface
+python Core_Scripts/plazza_chat.py
 
-# Run the analysis system
-python sales_ai.py
-
-# View generated visualizations in the visuals/ directory
+# Common commands in the chat interface:
+# "analyze sales data" - Trigger full analysis mode
+# "what were our top products last month?" - Simple query mode
+# "visualize the last analysis" - Generate visualizations
+# "create a strategy for improving sales" - Generate business strategy
 ```
 
-## Visualization Examples
+### Data Analysis
+```bash
+# Run full data analysis
+python Core_Scripts/plazza_analytics.py
 
-After running `sales_ai.py`, the system will:
-1. Generate comprehensive business analysis
-2. Create visualizations in the `visuals/` directory
-3. Embed visualizations in the enhanced markdown report
-4. Generate both static images and interactive HTML visualizations
+# Run analysis with specific focus
+python Core_Scripts/plazza_analytics.py "Analyze customer retention trends"
+```
+
+### Batch Analysis with Freshness Check
+```bash
+# Normal run (skips if KB is fresh)
+python Core_Scripts/batch_analysis.py
+
+# Force run (ignores KB freshness)
+python Core_Scripts/batch_analysis.py --force
+```
+
+### Visualization Generation
+```bash
+# Visualize from a file
+python Core_Scripts/crewai_visualization.py --file analysis.md
+
+# Visualize from direct content
+python Core_Scripts/crewai_visualization.py --content "## Analysis..."
+
+# Create a zip bundle of visualizations
+python Core_Scripts/crewai_visualization.py --file analysis.md --zip
+```
+
+## Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/anisen943-plazza/crewai.git
+cd crewai
+```
+
+2. Create a virtual environment
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+4. Set up environment variables
+```bash
+cp .env.example .env
+# Edit .env with your database credentials and API keys
+```
 
 ## Environment Variables
 
-Requires the following environment variables:
+Required environment variables:
 - `OPENAI_API_KEY`: For CrewAI agent (GPT-4o)
 - `DATABASE_URL`: CockroachDB connection string for defaultdb
 - `DATABASE_URL_USER_TRANSACTIONS`: Connection string for user_transactions
 - `DATABASE_URL_ERP`: Connection string for plazza_erp database
 - `DATABASE_URL_USER`: Connection string for user_events database
+- `VISUALIZATION_OUTPUT_DIR`: Directory for visualization outputs
+- `DEFAULT_ANALYSIS_FILE`: Default input file for visualizations
+
+## Documentation
+
+For comprehensive documentation about the system architecture, implementation details, and development history, see [CLAUDE.md](CLAUDE.md).
+
+## License
+
+This project is proprietary and confidential. All rights reserved.
+
+## Contributors
+
+- Aniruddha Sen (Project Lead)
+- Claude (Technical Documentation and Development)
