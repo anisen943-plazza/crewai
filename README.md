@@ -116,7 +116,15 @@ python Core_Scripts/advanced_router.py
 # "Analyze our sales performance compared to last year"
 
 # The system will automatically route your query to the appropriate specialist
+# and perform self-evaluation of response quality (logged for analysis)
 ```
+
+The Advanced Router features:
+- Intelligent intent classification and routing
+- Self-evaluation of response quality
+- Detailed logging of routing decisions
+- Potential re-routing for inadequate responses
+- Response quality metrics tracking
 
 ### Data Analysis
 ```bash

@@ -2429,6 +2429,69 @@ VISUALIZATION_OUTPUT_DIR=/path/to/custom/visuals/directory
 OPENAI_API_KEY=your-api-key
 ```
 
+### Self-Evaluating Router Enhancement (March 30, 2025)
+
+1. **Self-Evaluation Capability**:
+   - Added response quality self-evaluation to the router agent
+   - Implemented routing effectiveness assessment
+   - Added quality metrics assessment (completeness, accuracy, follow-up needs)
+   - Created hidden HTML comments for self-evaluation metadata
+   - Enhanced logging to capture evaluation details separately from user response
+
+2. **Agent Reflection System**:
+   - Added quality criteria assessment for each delegation
+   - Implemented agent selection reasoning documentation
+   - Created feedback loop for potential re-routing
+   - Added detailed analytics on routing decisions
+   - Enhanced debugging capabilities with transparent decision documentation
+
+3. **Enhanced Logging Functionality**:
+   - Added structured self-evaluation section in log files
+   - Created separate display for routing decisions vs. actual response
+   - Implemented error handling with detailed diagnostic information
+   - Added richer metadata for troubleshooting and improvement
+
+4. **Implementation Details**:
+   ```python
+   # Enhanced task description with self-evaluation instructions
+   router_task = Task(
+       description=f"""
+   # ...task instructions...
+   
+   5. Evaluate the response quality:
+      - Does it directly answer the user's question?
+      - Is the information complete and accurate?
+      - Would the user need to ask follow-up questions?
+      - If unsatisfactory, consider delegating to a different agent.
+   
+   Your final output should include:
+   1. The result of the delegated task
+   2. A brief hidden self-evaluation note in HTML comment format <!-- Self-evaluation: ... -->
+      indicating which agent was selected, why, and your assessment of the quality.
+   """,
+   # ...other parameters...
+   )
+   
+   # Extract self-evaluation while hiding it from the user
+   eval_match = re.search(r'<!--\s*(Self-evaluation:.*?)-->', result, re.DOTALL)
+   if eval_match:
+       self_evaluation = eval_match.group(1).strip()
+       # Remove the evaluation from user-facing response
+       user_response = re.sub(r'<!--\s*Self-evaluation:.*?-->', '', result, flags=re.DOTALL).strip()
+   ```
+
+5. **Benefits**:
+   - **Improved Routing Quality**: System can learn from its own assessments
+   - **Better Debugging**: Clear documentation of why specific agents were selected
+   - **Enhanced Analytics**: Valuable metadata for system improvement
+   - **Response Validation**: Built-in quality check for every response
+   - **Transparency**: Clear documentation of routing decisions without cluttering user responses
+   - **Continuous Improvement**: Foundation for future self-improving capabilities
+
+6. **Files Modified**:
+   - Enhanced `/Core_Scripts/advanced_router.py` with self-evaluation capabilities
+   - Updated `/CLAUDE.md` with implementation documentation
+
 ### Advanced Routing Implementation (March 29, 2025)
 
 1. **Intelligent Query Routing System**:

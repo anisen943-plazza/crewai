@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = BASE_DIR / "Run_Results" / "router_logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-def save_conversation(query, response):
+def save_conversation(query, response, self_evaluation=None):
     """Save the conversation to a log file."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"conversation_{timestamp}.md"
@@ -38,6 +38,11 @@ def save_conversation(query, response):
 ## AI Response
 ```
 {response}
+```
+
+## Router Self-Evaluation
+```
+{self_evaluation if self_evaluation else "No self-evaluation provided"}
 ```
 
 ## Metadata
@@ -80,9 +85,26 @@ You are given the following user request:
 
 4. Delegate it using CrewAI delegation.
 
-Your final output should be the result of the delegated task only.
+5. Evaluate the response quality:
+   - Does it directly answer the user's question?
+   - Is the information complete and accurate?
+   - Would the user need to ask follow-up questions?
+   - If unsatisfactory, consider delegating to a different agent.
+
+Your final output should include:
+1. The result of the delegated task
+2. A brief hidden self-evaluation note in HTML comment format <!-- Self-evaluation: ... -->
+   indicating which agent was selected, why, and your assessment of the quality.
+
+Example format:
+```
+[Actual response to user query]
+
+<!-- Self-evaluation: Routed to Data Q&A Expert. Query about top products was answered
+comprehensively with specific metrics. No follow-up required. -->
+```
 """,
-        expected_output="A delegated response based on the user's intent.",
+        expected_output="A delegated response based on the user's intent with hidden self-evaluation.",
         agent=router,
         async_execution=False
     )
@@ -101,11 +123,28 @@ Your final output should be the result of the delegated task only.
     
     try:
         result = crew.kickoff(inputs={"user_input": user_query})
-        save_conversation(user_query, result)
-        return result
+        
+        # Extract self-evaluation from response if present
+        self_evaluation = None
+        user_response = result
+        
+        # Use regex to extract the self-evaluation comment
+        import re
+        eval_match = re.search(r'<!--\s*(Self-evaluation:.*?)-->', result, re.DOTALL)
+        if eval_match:
+            self_evaluation = eval_match.group(1).strip()
+            # Remove the evaluation from user-facing response
+            user_response = re.sub(r'<!--\s*Self-evaluation:.*?-->', '', result, flags=re.DOTALL).strip()
+        
+        # Save both the original query, cleaned response, and extracted evaluation
+        save_conversation(user_query, user_response, self_evaluation)
+        
+        # Return the clean response without the self-evaluation
+        return user_response
     except Exception as e:
         error_message = f"Error during routing: {str(e)}"
         print(f"\n❌ {error_message}")
+        save_conversation(user_query, error_message, f"Routing Error: {str(e)}")
         return error_message
 
 if __name__ == "__main__":
