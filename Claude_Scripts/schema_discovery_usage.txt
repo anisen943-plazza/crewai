@@ -1,0 +1,86 @@
+# Using Schema Discovery Methodology
+
+To discover and document new database schemas using the existing multi-agent system without code changes, follow these steps:
+
+## 1. Preparation
+
+Make sure your environment is set up with:
+- All database connection variables properly configured
+- The multi-agent system (sales_ai.py or sales_ai_visualization.py) ready to run
+- No code changes needed - we'll use prompt engineering only
+
+## 2. Running Schema Discovery
+
+When running the analysis, include schema discovery instructions in your task description:
+
+```
+python sales_ai.py "Before conducting your standard business analysis, perform a comprehensive schema discovery across all databases in our CockroachDB cluster. Query information_schema tables to identify all databases, tables, columns, and relationships. Document any new discoveries in your analysis under a dedicated 'Database Schema' section, and incorporate any newly discovered tables into your business analysis if relevant."
+```
+
+Or for the multi-agent version:
+
+```
+python sales_ai_visualization.py "Start with comprehensive schema discovery across all databases in our CockroachDB cluster using information_schema queries. Document all databases, tables, columns, and relationships, paying special attention to any newly added tables. Include a 'Database Schema' section in your analysis, and ensure the visualization specialist knows about any new data structures."
+```
+
+## 3. Key Elements of the Prompt
+
+The effective schema discovery prompt includes these key components:
+
+1. **Explicit instruction to perform schema discovery first**
+   - Makes schema discovery a priority task
+   - Establishes it as a prerequisite for analysis
+
+2. **Reference to information_schema tables**
+   - Guides the agent to use specific queries 
+   - Ensures standard approach to schema discovery
+
+3. **Documentation requirements**
+   - Requests a dedicated "Database Schema" section
+   - Ensures findings are formatted for knowledge base updates
+
+4. **Integration with analysis**
+   - Requests incorporation of new tables into analysis
+   - Creates practical usage of newly discovered data
+
+## 4. Reviewing Results
+
+After the analysis runs:
+
+1. Check the "Database Schema" section for any new discoveries
+2. Verify that newly discovered tables are incorporated into the analysis
+3. Confirm that the RAG knowledge base has been updated with schema information
+4. Note any visualization adjustments made for new data structures
+
+## 5. Additional Considerations
+
+- **First run**: The initial schema discovery will document all databases and tables
+- **Subsequent runs**: Will identify and highlight only new changes
+- **Knowledge persistence**: Schema information is automatically saved to the RAG knowledge base
+- **No code changes**: This entire process works through prompting only
+
+## Examples of information_schema Queries
+
+The agents will typically use queries like:
+
+```sql
+-- Discover all databases
+SELECT schema_name 
+FROM information_schema.schemata 
+WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'crdb_internal', 'pg_extension')
+
+-- List all tables in a schema
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+
+-- Get column details for a table
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = '[TABLE_NAME]'
+ORDER BY ordinal_position
+```
+
+These queries will execute through the existing CockroachDBTool, requiring no tool modifications.
+
+Following this methodology ensures your multi-agent system can discover, document, and adapt to database schema changes without requiring any code modifications.

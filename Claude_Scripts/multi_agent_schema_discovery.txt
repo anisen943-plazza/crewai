@@ -1,0 +1,102 @@
+# Multi-Agent Schema Discovery Approach
+
+This document outlines how to implement database schema discovery in the multi-agent architecture, focusing on both data analyst and visualization specialist agents.
+
+## Data Analyst Agent Instructions
+
+The Data Analyst agent should be prompted to:
+
+1. **Perform Initial Schema Discovery**:
+   ```
+   Before conducting business analysis, first discover and document the complete database schema:
+   
+   1. Query information_schema tables to identify all databases and tables
+   2. Document column structures and relationships for each table
+   3. Compare findings against existing schema documentation
+   4. Add a dedicated "Database Schema" section to your analysis
+   5. Highlight any newly discovered tables or databases
+   ```
+
+2. **Structure Schema Documentation**:
+   ```
+   When documenting database schema, use this hierarchical structure:
+   
+   ## Database Schema
+   
+   ### 1. [Database Name] Database
+   - **Table 1**: Description
+     - column_1: data_type, [nullable/not null], [description]
+     - column_2: data_type, [nullable/not null], [description]
+     - Primary Key: column_name
+     - Foreign Keys: column_name references other_table(other_column)
+   
+   - **Table 2**: Description
+     [...]
+   
+   ### 2. [Database Name] Database
+   [...]
+   ```
+
+3. **Include Sample Data**:
+   ```
+   For each new table discovered, include a small sample of data:
+   
+   **Sample Data for [Table Name]:**
+   ```sql
+   SELECT * FROM [database].[table_name] LIMIT 3;
+   ```
+   [Include results here]
+   ```
+
+## Visualization Specialist Agent Instructions
+
+The Visualization Specialist agent should be prompted with:
+
+1. **Schema Awareness**:
+   ```
+   Review the database schema documentation provided by the Data Analyst, paying 
+   special attention to any newly discovered tables. Consider how these new data 
+   structures could be visualized effectively.
+   ```
+
+2. **Visualization Mapping**:
+   ```
+   For each new table or data structure, determine:
+   
+   1. What visualization types would be most appropriate (bar chart, pie chart, etc.)
+   2. Which columns should map to visual elements (x-axis, y-axis, color, etc.)
+   3. How to integrate visualizations of new data with existing dashboards
+   4. What insights could be highlighted from the new data
+   ```
+
+3. **Adaptation Instructions**:
+   ```
+   If you detect new data structures, adapt your visualization approach by:
+   
+   1. Creating appropriate regex patterns to extract data about new tables
+   2. Mapping table columns to visual attributes based on data types
+   3. Generating appropriate chart titles and descriptions
+   4. Including explanatory notes about new data elements
+   ```
+
+## Process Configuration
+
+When running the multi-agent process:
+
+1. **Sequential Processing**:
+   - Ensure Data Analyst completes schema discovery before Visualization Specialist begins
+   - Use `Process.sequential` to maintain proper task ordering
+   - Share knowledge between agents through the RAG system
+
+2. **Knowledge Persistence**:
+   - Make sure schema documentation is saved to the RAG knowledge base
+   - Format schema sections with clear headers for optimal chunking
+   - Use consistent documentation patterns for better retrieval
+
+## Example Prompt for Running Multi-Agent Schema Discovery
+
+```
+python sales_ai_visualization.py "Execute a multi-stage analysis beginning with comprehensive database schema discovery. The Data Analyst should first query information_schema tables to document all databases, tables, columns, and relationships in the CockroachDB cluster, with special attention to any newly added tables. Include a detailed 'Database Schema' section with sample data for new tables. The Visualization Specialist should then adapt visualization strategies to incorporate any newly discovered data structures, selecting appropriate chart types based on the data characteristics. Ensure both standard business analysis and schema discovery are included in the final report."
+```
+
+This approach ensures both agents in the multi-agent system can discover, document, and adapt to database schema changes without requiring any code modifications.

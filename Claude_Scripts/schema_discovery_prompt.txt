@@ -1,0 +1,103 @@
+# Data Analyst Agent Schema Discovery Prompt
+
+Hello Enterprise Data Analyst,
+
+I need you to perform a comprehensive database schema discovery across our CockroachDB cluster to identify and document any new tables or databases. This is essential for keeping our knowledge base up-to-date and ensuring our analyses cover all available data sources.
+
+## Task Description
+
+Your first priority should be discovering and documenting all database schemas in the Plazza ecosystem by:
+
+1. Querying information_schema tables to identify:
+   - All available databases (schemas)
+   - All tables within each database
+   - Column structures for each table
+   - Relationships between tables (foreign keys)
+
+2. Documenting the discovered schema in a clear, structured format that:
+   - Groups tables by database
+   - Includes complete column information (name, data type, nullability)
+   - Documents primary and foreign keys
+   - Includes sample data where appropriate
+
+3. Comparing your findings against our existing schema documentation to identify:
+   - New databases not previously documented
+   - New tables in existing databases
+   - Changes to existing table structures
+
+4. Updating the knowledge base with a comprehensive "Database Schema" section that:
+   - Preserves existing documentation
+   - Adds new schema information in a properly structured format
+   - Uses clear hierarchical markdown for optimal RAG retrieval
+
+## Query Examples
+
+Use these information_schema queries as starting points:
+
+1. **Discover all databases**:
+```sql
+SELECT schema_name 
+FROM information_schema.schemata 
+WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'crdb_internal', 'pg_extension')
+```
+
+2. **List all tables in a schema**:
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+```
+
+3. **Get column details for a table**:
+```sql
+SELECT column_name, data_type, character_maximum_length, column_default, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = '[TABLE_NAME]'
+ORDER BY ordinal_position
+```
+
+4. **Discover primary keys**:
+```sql
+SELECT c.column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+JOIN information_schema.columns AS c 
+    ON c.table_schema = tc.constraint_schema
+    AND c.table_name = tc.table_name
+    AND c.column_name = ccu.column_name
+WHERE tc.constraint_type = 'PRIMARY KEY'
+    AND tc.table_schema = 'public'
+    AND tc.table_name = '[TABLE_NAME]'
+```
+
+5. **Discover foreign keys**:
+```sql
+SELECT tc.constraint_name, kcu.column_name,
+    ccu.table_schema AS foreign_table_schema,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints AS tc
+JOIN information_schema.key_column_usage AS kcu
+    ON tc.constraint_name = kcu.constraint_name
+    AND tc.table_schema = kcu.table_schema
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+    AND ccu.table_schema = tc.constraint_schema
+WHERE tc.constraint_type = 'FOREIGN KEY'
+    AND tc.table_schema = 'public'
+    AND tc.table_name = '[TABLE_NAME]'
+```
+
+## Expected Output
+
+After discovering the schema, proceed with your normal business analysis, but include a dedicated "Database Schema" section in your final report containing:
+
+1. An overview of all discovered databases
+2. A hierarchical listing of tables by database
+3. Detailed structure for each table
+4. Relationships between tables
+5. Highlighted new discoveries compared to existing documentation
+
+This will ensure our knowledge base stays current with any database changes, making both your analysis and future analyses more complete and accurate.
+
+Thank you for your attention to this critical task!

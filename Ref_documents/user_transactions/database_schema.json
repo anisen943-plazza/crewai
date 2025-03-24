@@ -1,0 +1,2019 @@
+{
+  "database_name": "user_transactions",
+  "user": "aniruddha",
+  "tables": {
+    "contact_addresses": {
+      "name": "contact_addresses",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "contact_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "address_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "house_number",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "floor",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "landmark",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "building_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "locality",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "state",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "pincode",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "latitude",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "longitude",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "is_primary",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "column_default": "false",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "state_code",
+          "data_type": "character varying",
+          "character_maximum_length": 2,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "country",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": "'India'",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "contact_addresses_contact_id_fkey",
+          "column_name": "contact_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "contacts",
+          "foreign_column_name": "id"
+        }
+      ],
+      "sample_data": [
+        {
+          "id": "54d0aa51-da05-44a7-9d7e-935753cd4dcd",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "address_id": null,
+          "house_number": "102",
+          "floor": "1st Floor",
+          "landmark": "Near Kempegowda Metro Station",
+          "building_name": "Elegant Enclave",
+          "locality": "Malleshwaram",
+          "state": "Karnataka",
+          "pincode": "560003",
+          "latitude": "12.99750000",
+          "longitude": "77.57730000",
+          "is_primary": true,
+          "created_at": "2025-03-12 10:56:07.213400+00:00",
+          "state_code": "KA",
+          "country": "India"
+        }
+      ]
+    },
+    "contact_phones": {
+      "name": "contact_phones",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "contact_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "phone_number",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "is_primary",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "column_default": "false",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "contact_phones_contact_id_fkey",
+          "column_name": "contact_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "contacts",
+          "foreign_column_name": "id"
+        }
+      ],
+      "sample_data": [
+        {
+          "id": "192ba446-5936-479b-be0a-b8d0c67e6dff",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "phone_number": "8850959517",
+          "is_primary": true,
+          "created_at": "2025-03-01 13:52:27.689759+00:00"
+        },
+        {
+          "id": "81c08956-1d41-40fe-94e8-8163147685a3",
+          "contact_id": "fda8b2c6-dce1-4a06-a0ab-d81edcf95327",
+          "phone_number": "9999999999",
+          "is_primary": true,
+          "created_at": "2025-03-11 11:28:11.427076+00:00"
+        },
+        {
+          "id": "9b9bd4bf-67c6-4da4-b648-8c665bad765c",
+          "contact_id": "63be6990-4c7f-4754-a7cb-b1bcd092b385",
+          "phone_number": "9876543210",
+          "is_primary": true,
+          "created_at": "2025-02-28 01:05:00.931186+00:00"
+        },
+        {
+          "id": "fbd9a030-c774-4c63-b875-2a842306bb4f",
+          "contact_id": "c56e9b12-3e7e-45f7-92b8-e29433e8d82a",
+          "phone_number": "8090390832",
+          "is_primary": true,
+          "created_at": "2025-03-11 11:27:35.581020+00:00"
+        }
+      ]
+    },
+    "contacts": {
+      "name": "contacts",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "contact_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "first_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "last_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "email",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "gender",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "imei",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "last_login",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "app_version",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "os_version",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "customer_type",
+          "data_type": "character varying",
+          "character_maximum_length": 20,
+          "column_default": "'WALK_IN'",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_contact_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "store_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "gst_treatment",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": "'consumer'",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "contact_type",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": "'customer'",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "customer_sub_type",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": "'individual'",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "sample_data": [
+        {
+          "id": "63be6990-4c7f-4754-a7cb-b1bcd092b385",
+          "contact_id": "63be6990-4c7f-4754-a7cb-b1bcd092b385",
+          "first_name": "Test Customer",
+          "last_name": null,
+          "email": null,
+          "gender": "NOT_SPECIFIED",
+          "imei": null,
+          "last_login": null,
+          "app_version": null,
+          "os_version": null,
+          "created_at": "2025-02-28 01:05:00.931186+00:00",
+          "updated_at": "2025-02-28 01:05:00.931186+00:00",
+          "customer_type": "WALK_IN",
+          "zoho_contact_id": "2325214000000108002",
+          "store_id": null,
+          "gst_treatment": "consumer",
+          "contact_type": "customer",
+          "customer_sub_type": "individual"
+        },
+        {
+          "id": "c56e9b12-3e7e-45f7-92b8-e29433e8d82a",
+          "contact_id": "c56e9b12-3e7e-45f7-92b8-e29433e8d82a",
+          "first_name": "Abhi Tiwari",
+          "last_name": null,
+          "email": null,
+          "gender": "Male",
+          "imei": null,
+          "last_login": null,
+          "app_version": null,
+          "os_version": null,
+          "created_at": "2025-03-11 11:27:35.581020+00:00",
+          "updated_at": "2025-03-11 11:27:35.581020+00:00",
+          "customer_type": "WALK_IN",
+          "zoho_contact_id": null,
+          "store_id": null,
+          "gst_treatment": "consumer",
+          "contact_type": "customer",
+          "customer_sub_type": "individual"
+        },
+        {
+          "id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "first_name": "Test Customer",
+          "last_name": null,
+          "email": null,
+          "gender": "NOT_SPECIFIED",
+          "imei": null,
+          "last_login": null,
+          "app_version": null,
+          "os_version": null,
+          "created_at": "2025-03-01 13:52:27.689759+00:00",
+          "updated_at": "2025-03-01 13:52:27.689759+00:00",
+          "customer_type": "WALK_IN",
+          "zoho_contact_id": "2325214000000118089",
+          "store_id": null,
+          "gst_treatment": "consumer",
+          "contact_type": "customer",
+          "customer_sub_type": "individual"
+        },
+        {
+          "id": "fda8b2c6-dce1-4a06-a0ab-d81edcf95327",
+          "contact_id": "fda8b2c6-dce1-4a06-a0ab-d81edcf95327",
+          "first_name": "Test User",
+          "last_name": null,
+          "email": null,
+          "gender": "Male",
+          "imei": null,
+          "last_login": null,
+          "app_version": null,
+          "os_version": null,
+          "created_at": "2025-03-11 11:28:11.427076+00:00",
+          "updated_at": "2025-03-11 11:28:11.427076+00:00",
+          "customer_type": "WALK_IN",
+          "zoho_contact_id": "2325214000000159002",
+          "store_id": null,
+          "gst_treatment": "consumer",
+          "contact_type": "customer",
+          "customer_sub_type": "individual"
+        }
+      ]
+    },
+    "order_items": {
+      "name": "order_items",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "order_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "product_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "medicine_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "distributor_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "mrp",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "selling_price",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "quantity",
+          "data_type": "bigint",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "item_total",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "item_discount",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": "0.00",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "tax_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "tax_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "pre_tax_rate",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "fk_order_items_order",
+          "column_name": "order_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "orders",
+          "foreign_column_name": "order_id"
+        }
+      ],
+      "sample_data": [
+        {
+          "id": "18687892-2312-4a6d-8393-cd6003db8151",
+          "order_id": "CART-16445809",
+          "product_id": "165005",
+          "medicine_name": "SOMPRAZ L CAP",
+          "distributor_name": "Mahavir",
+          "mrp": "320.00",
+          "selling_price": "267.52",
+          "quantity": 1,
+          "item_total": "267.52",
+          "created_at": "2025-02-28 12:58:35.628899+00:00",
+          "updated_at": "2025-02-28 12:58:35.628899+00:00",
+          "item_discount": "0.00",
+          "tax_name": null,
+          "tax_id": null,
+          "pre_tax_rate": null
+        },
+        {
+          "id": "2644b31f-3a78-440b-a89e-afbff6899515",
+          "order_id": "CART-60abaf4f",
+          "product_id": "158091",
+          "medicine_name": "DOLO 650 MG TAB",
+          "distributor_name": "Mahavir",
+          "mrp": "33.76",
+          "selling_price": "28.22",
+          "quantity": 1,
+          "item_total": "28.22",
+          "created_at": "2025-03-05 04:19:11.195562+00:00",
+          "updated_at": "2025-03-05 04:19:11.195562+00:00",
+          "item_discount": "0.00",
+          "tax_name": null,
+          "tax_id": null,
+          "pre_tax_rate": null
+        },
+        {
+          "id": "27eebd4a-f6cb-43a1-bd33-71eeefa1cab6",
+          "order_id": "CART-42a76b87",
+          "product_id": "199853",
+          "medicine_name": "MYMI D TAB",
+          "distributor_name": "vardhaman",
+          "mrp": "170.00",
+          "selling_price": "143.62",
+          "quantity": 2,
+          "item_total": "287.24",
+          "created_at": "2025-03-11 11:27:34.181327+00:00",
+          "updated_at": "2025-03-11 11:27:34.181327+00:00",
+          "item_discount": "0.00",
+          "tax_name": null,
+          "tax_id": null,
+          "pre_tax_rate": null
+        },
+        {
+          "id": "31f6df42-7511-4c77-a308-bd4adbbafe96",
+          "order_id": "TEST_POD_123456",
+          "product_id": "PROD123",
+          "medicine_name": "Paracetamol",
+          "distributor_name": "ABC Pharma",
+          "mrp": "1.50",
+          "selling_price": "1.00",
+          "quantity": 1,
+          "item_total": "1.00",
+          "created_at": "2025-03-13 11:27:57.036780+00:00",
+          "updated_at": "2025-03-13 11:27:57.036780+00:00",
+          "item_discount": "0.00",
+          "tax_name": null,
+          "tax_id": null,
+          "pre_tax_rate": null
+        },
+        {
+          "id": "352aa2eb-eb83-4718-b9dd-37766856ccc7",
+          "order_id": "CART-fd7d59c7",
+          "product_id": "165005",
+          "medicine_name": "SOMPRAZ L CAP",
+          "distributor_name": "Mahavir",
+          "mrp": "320.00",
+          "selling_price": "267.52",
+          "quantity": 1,
+          "item_total": "267.52",
+          "created_at": "2025-02-28 04:47:53.958368+00:00",
+          "updated_at": "2025-02-28 04:47:53.958368+00:00",
+          "item_discount": "0.00",
+          "tax_name": null,
+          "tax_id": null,
+          "pre_tax_rate": null
+        }
+      ]
+    },
+    "orders": {
+      "name": "orders",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "order_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "contact_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "status",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "bill_total_amount",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "item_total",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "delivery_charges",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "platform_fee",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "packaging_charges",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "convenience_fee",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "cart_discount",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": "0.00",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "cart_notes",
+          "data_type": "jsonb",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_invoice_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_invoice_number",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_invoice_status",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "place_of_supply",
+          "data_type": "character varying",
+          "character_maximum_length": 2,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "store_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "delivery_type",
+          "data_type": "character varying",
+          "character_maximum_length": 20,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "tookan_job_id",
+          "data_type": "character varying",
+          "character_maximum_length": 64,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "whatsapp_notification_status",
+          "data_type": "character varying",
+          "character_maximum_length": 20,
+          "column_default": null,
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "orders_contact_id_fkey",
+          "column_name": "contact_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "contacts",
+          "foreign_column_name": "id"
+        }
+      ],
+      "sample_data": [
+        {
+          "id": "0491494f-7c2e-433f-aeba-7eeeab7a9279",
+          "order_id": "CART-de52864f",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "status": "paid",
+          "bill_total_amount": "267.52",
+          "item_total": "267.52",
+          "delivery_charges": null,
+          "platform_fee": null,
+          "packaging_charges": null,
+          "convenience_fee": null,
+          "created_at": "2025-03-03 09:04:46.071054+00:00",
+          "updated_at": "2025-03-03 09:05:37.731349+00:00",
+          "cart_discount": "0.00",
+          "cart_notes": null,
+          "zoho_invoice_id": "2325214000000118106",
+          "zoho_invoice_number": "INV-000014",
+          "zoho_invoice_status": "draft",
+          "place_of_supply": "KA",
+          "store_id": null,
+          "delivery_type": null,
+          "tookan_job_id": null,
+          "whatsapp_notification_status": null
+        },
+        {
+          "id": "0499b73c-3148-4361-a8ba-f414b0cfecde",
+          "order_id": "CART-11688daa",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "status": "paid",
+          "bill_total_amount": "267.52",
+          "item_total": "267.52",
+          "delivery_charges": null,
+          "platform_fee": null,
+          "packaging_charges": null,
+          "convenience_fee": null,
+          "created_at": "2025-03-03 00:31:38.966459+00:00",
+          "updated_at": "2025-03-03 00:32:34.955198+00:00",
+          "cart_discount": "0.00",
+          "cart_notes": null,
+          "zoho_invoice_id": "2325214000000133002",
+          "zoho_invoice_number": "INV-000013",
+          "zoho_invoice_status": "draft",
+          "place_of_supply": "KA",
+          "store_id": null,
+          "delivery_type": null,
+          "tookan_job_id": null,
+          "whatsapp_notification_status": null
+        },
+        {
+          "id": "06737103-7483-4c5f-9164-17e45cdf0b44",
+          "order_id": "CART-7e5964ac",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "status": "paid",
+          "bill_total_amount": "267.52",
+          "item_total": "267.52",
+          "delivery_charges": null,
+          "platform_fee": null,
+          "packaging_charges": null,
+          "convenience_fee": null,
+          "created_at": "2025-03-03 11:26:07.637341+00:00",
+          "updated_at": "2025-03-03 11:27:27.677677+00:00",
+          "cart_discount": "0.00",
+          "cart_notes": null,
+          "zoho_invoice_id": "2325214000000110036",
+          "zoho_invoice_number": "INV-000016",
+          "zoho_invoice_status": "draft",
+          "place_of_supply": "KA",
+          "store_id": null,
+          "delivery_type": null,
+          "tookan_job_id": null,
+          "whatsapp_notification_status": null
+        },
+        {
+          "id": "076478fd-e5f0-4d5e-8c7b-afcf02bb2f47",
+          "order_id": "CART-c5fc9c96",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "status": "paid",
+          "bill_total_amount": "267.52",
+          "item_total": "267.52",
+          "delivery_charges": null,
+          "platform_fee": null,
+          "packaging_charges": null,
+          "convenience_fee": null,
+          "created_at": "2025-03-04 09:17:15.603562+00:00",
+          "updated_at": "2025-03-04 09:18:18.850282+00:00",
+          "cart_discount": "0.00",
+          "cart_notes": null,
+          "zoho_invoice_id": "2325214000000124226",
+          "zoho_invoice_number": "INV-000019",
+          "zoho_invoice_status": "draft",
+          "place_of_supply": "KA",
+          "store_id": null,
+          "delivery_type": null,
+          "tookan_job_id": null,
+          "whatsapp_notification_status": null
+        },
+        {
+          "id": "0b2af2ae-1cf5-4472-bf8d-013b61eff980",
+          "order_id": "CART-ac51d678",
+          "contact_id": "d150b315-89b3-47f7-9bca-c3b89e168d8e",
+          "status": "paid",
+          "bill_total_amount": "267.52",
+          "item_total": "267.52",
+          "delivery_charges": null,
+          "platform_fee": null,
+          "packaging_charges": null,
+          "convenience_fee": null,
+          "created_at": "2025-03-03 09:22:50.890212+00:00",
+          "updated_at": "2025-03-03 09:23:35.661697+00:00",
+          "cart_discount": "0.00",
+          "cart_notes": null,
+          "zoho_invoice_id": "2325214000000132015",
+          "zoho_invoice_number": "INV-000015",
+          "zoho_invoice_status": "draft",
+          "place_of_supply": "KA",
+          "store_id": null,
+          "delivery_type": null,
+          "tookan_job_id": null,
+          "whatsapp_notification_status": null
+        }
+      ]
+    },
+    "payments": {
+      "name": "payments",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "payment_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "customer_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "order_amount",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "payment_status",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "payment_method",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "transaction_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "payment_date",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "razorpay_payment_link",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "upi_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "bank_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "card_token_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "payment_gateway",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "discount_amount",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "discount_code",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "payment_fees",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_code_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_code_url",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_usage",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_status",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_fixed_amount",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_payment_amount",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_close_by",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_closed_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_close_reason",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "qr_notes",
+          "data_type": "jsonb",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "order_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "payment_instrument",
+          "data_type": "character varying",
+          "character_maximum_length": 20,
+          "column_default": "'POS_UPI_QR'",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_payment_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_account_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_account_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "zoho_account_type",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": "'Payment Clearing'",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "store_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "payments_customer_id_fkey",
+          "column_name": "customer_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "contacts",
+          "foreign_column_name": "id"
+        },
+        {
+          "constraint_name": "payments_order_id_fkey",
+          "column_name": "order_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "orders",
+          "foreign_column_name": "order_id"
+        }
+      ],
+      "sample_data": [
+        {
+          "id": "006fe177-042d-46d8-a07e-eb9b767e6dbe",
+          "payment_id": "pay_Q18g0Ni5lznN1t",
+          "customer_id": null,
+          "order_amount": "267.52",
+          "payment_status": "captured",
+          "payment_method": "upi",
+          "transaction_id": null,
+          "payment_date": "2025-02-28 12:59:39.141018+00:00",
+          "razorpay_payment_link": null,
+          "upi_id": "8850959517-2@ibl",
+          "bank_name": null,
+          "card_token_id": null,
+          "payment_gateway": null,
+          "discount_amount": null,
+          "discount_code": null,
+          "payment_fees": "6.47",
+          "created_at": "2025-02-28 12:58:44.558583+00:00",
+          "updated_at": "2025-02-28 12:59:39.141018+00:00",
+          "qr_code_id": "qr_Q18fXnlejUCzr1",
+          "qr_code_url": "https://rzp.io/rzp/cIbzeob",
+          "qr_usage": "single_use",
+          "qr_status": "closed",
+          "qr_fixed_amount": true,
+          "qr_payment_amount": "267.52",
+          "qr_close_by": "2025-03-01 18:28:42+00:00",
+          "qr_closed_at": "2025-02-28 12:59:39.141018+00:00",
+          "qr_close_reason": null,
+          "qr_notes": {
+            "order_id": "CART-16445809"
+          },
+          "order_id": "CART-16445809",
+          "payment_instrument": "POS_UPI_QR",
+          "zoho_payment_id": "2325214000000127021",
+          "zoho_account_id": "2325214000000111001",
+          "zoho_account_name": "Customer Order Payments",
+          "zoho_account_type": "Payment Clearing",
+          "store_id": null
+        },
+        {
+          "id": "0133c004-3559-4716-8341-5537bc0a8a16",
+          "payment_id": null,
+          "customer_id": null,
+          "order_amount": "267.52",
+          "payment_status": "pending",
+          "payment_method": null,
+          "transaction_id": null,
+          "payment_date": null,
+          "razorpay_payment_link": null,
+          "upi_id": null,
+          "bank_name": null,
+          "card_token_id": null,
+          "payment_gateway": null,
+          "discount_amount": null,
+          "discount_code": null,
+          "payment_fees": null,
+          "created_at": "2025-02-28 01:22:10.687021+00:00",
+          "updated_at": "2025-02-28 01:22:10.687021+00:00",
+          "qr_code_id": "qr_Q0wnk4jjZ54NUQ",
+          "qr_code_url": "https://rzp.io/rzp/LjsQaE1",
+          "qr_usage": "single_use",
+          "qr_status": "active",
+          "qr_fixed_amount": true,
+          "qr_payment_amount": "267.52",
+          "qr_close_by": "2025-03-01 06:52:08+00:00",
+          "qr_closed_at": null,
+          "qr_close_reason": null,
+          "qr_notes": {
+            "order_id": "CART-99ef475e"
+          },
+          "order_id": "CART-99ef475e",
+          "payment_instrument": "POS_UPI_QR",
+          "zoho_payment_id": null,
+          "zoho_account_id": null,
+          "zoho_account_name": null,
+          "zoho_account_type": "Payment Clearing",
+          "store_id": null
+        },
+        {
+          "id": "068f184e-3905-4dc9-b6fe-ee0110861191",
+          "payment_id": null,
+          "customer_id": null,
+          "order_amount": "267.52",
+          "payment_status": "unknown",
+          "payment_method": null,
+          "transaction_id": null,
+          "payment_date": "2025-02-28 01:19:50.359712+00:00",
+          "razorpay_payment_link": null,
+          "upi_id": null,
+          "bank_name": null,
+          "card_token_id": null,
+          "payment_gateway": null,
+          "discount_amount": null,
+          "discount_code": null,
+          "payment_fees": "0.00",
+          "created_at": "2025-02-28 01:19:47.420875+00:00",
+          "updated_at": "2025-02-28 01:19:50.359712+00:00",
+          "qr_code_id": "qr_Q0wlDrdtuO5l2K",
+          "qr_code_url": "https://rzp.io/rzp/THsrUJgi",
+          "qr_usage": "single_use",
+          "qr_status": "closed",
+          "qr_fixed_amount": true,
+          "qr_payment_amount": "267.52",
+          "qr_close_by": "2025-03-01 06:49:45+00:00",
+          "qr_closed_at": "2025-02-28 01:19:50.359712+00:00",
+          "qr_close_reason": null,
+          "qr_notes": {
+            "order_id": "CART-fcc59d6b"
+          },
+          "order_id": "CART-fcc59d6b",
+          "payment_instrument": "POS_UPI_QR",
+          "zoho_payment_id": null,
+          "zoho_account_id": null,
+          "zoho_account_name": null,
+          "zoho_account_type": "Payment Clearing",
+          "store_id": null
+        },
+        {
+          "id": "1cf1d027-755d-4ec5-99c8-4d62f63ac57b",
+          "payment_id": "pay_Q2Ii8uSreqJWGX",
+          "customer_id": null,
+          "order_amount": "267.52",
+          "payment_status": "captured",
+          "payment_method": "upi",
+          "transaction_id": null,
+          "payment_date": "2025-03-03 11:27:27.677677+00:00",
+          "razorpay_payment_link": null,
+          "upi_id": "8850959517-2@ybl",
+          "bank_name": null,
+          "card_token_id": null,
+          "payment_gateway": null,
+          "discount_amount": null,
+          "discount_code": null,
+          "payment_fees": "6.47",
+          "created_at": "2025-03-03 11:26:34.577034+00:00",
+          "updated_at": "2025-03-03 11:27:27.677677+00:00",
+          "qr_code_id": "qr_Q2IhTig4ywC3Oi",
+          "qr_code_url": "https://rzp.io/rzp/fTkH7eV",
+          "qr_usage": "single_use",
+          "qr_status": "closed",
+          "qr_fixed_amount": true,
+          "qr_payment_amount": "267.52",
+          "qr_close_by": "2025-03-04 16:56:23+00:00",
+          "qr_closed_at": "2025-03-03 11:27:27.677677+00:00",
+          "qr_close_reason": null,
+          "qr_notes": {
+            "order_id": "CART-7e5964ac"
+          },
+          "order_id": "CART-7e5964ac",
+          "payment_instrument": "POS_UPI_QR",
+          "zoho_payment_id": "2325214000000125096",
+          "zoho_account_id": "2325214000000111001",
+          "zoho_account_name": "Customer Order Payments",
+          "zoho_account_type": "Payment Clearing",
+          "store_id": null
+        },
+        {
+          "id": "1e69be57-24e1-44cf-98e4-d9e4912fd3dc",
+          "payment_id": null,
+          "customer_id": null,
+          "order_amount": "143.62",
+          "payment_status": "pending",
+          "payment_method": null,
+          "transaction_id": null,
+          "payment_date": null,
+          "razorpay_payment_link": null,
+          "upi_id": null,
+          "bank_name": null,
+          "card_token_id": null,
+          "payment_gateway": null,
+          "discount_amount": null,
+          "discount_code": null,
+          "payment_fees": null,
+          "created_at": "2025-03-11 11:28:40.605145+00:00",
+          "updated_at": "2025-03-11 11:28:40.605145+00:00",
+          "qr_code_id": "qr_Q5T0iPPGveLIwc",
+          "qr_code_url": "https://rzp.io/rzp/GTkrTBA",
+          "qr_usage": "single_use",
+          "qr_status": "active",
+          "qr_fixed_amount": true,
+          "qr_payment_amount": "143.62",
+          "qr_close_by": "2025-03-12 16:58:37+00:00",
+          "qr_closed_at": null,
+          "qr_close_reason": null,
+          "qr_notes": {
+            "order_id": "CART-af8d7653"
+          },
+          "order_id": "CART-af8d7653",
+          "payment_instrument": "POS_UPI_QR",
+          "zoho_payment_id": null,
+          "zoho_account_id": null,
+          "zoho_account_name": null,
+          "zoho_account_type": "Payment Clearing",
+          "store_id": null
+        }
+      ]
+    },
+    "products": {
+      "name": "products",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "product_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "medicine_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "medicine_type",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "mrp",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "distributor_name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "plazza_selling_price_incl_gst",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "effective_customer_discount",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "quantity_ordered",
+          "data_type": "bigint",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "item_total",
+          "data_type": "numeric",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "quantity_available",
+          "data_type": "bigint",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "order_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "fk_order_id",
+          "column_name": "order_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "orders",
+          "foreign_column_name": "order_id"
+        }
+      ],
+      "sample_data": null
+    },
+    "stores": {
+      "name": "stores",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "name",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "address",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "city",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "state",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "state_code",
+          "data_type": "character varying",
+          "character_maximum_length": 2,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "pincode",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "phone",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "email",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "gst_number",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "sample_data": null
+    },
+    "tookan_jobs": {
+      "name": "tookan_jobs",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "order_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "job_id",
+          "data_type": "character varying",
+          "character_maximum_length": 64,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "agent_id",
+          "data_type": "character varying",
+          "character_maximum_length": 64,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "agent_name",
+          "data_type": "character varying",
+          "character_maximum_length": 128,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "job_status",
+          "data_type": "character varying",
+          "character_maximum_length": 20,
+          "column_default": "'pending'",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "tracking_url",
+          "data_type": "text",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "tookan_jobs_order_id_fkey",
+          "column_name": "order_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "orders",
+          "foreign_column_name": "order_id"
+        }
+      ],
+      "sample_data": [
+        {
+          "id": "71ea9d2f-6a86-4d4f-864e-a5058b92da15",
+          "order_id": "TEST_POD_123456",
+          "job_id": "555137576",
+          "agent_id": null,
+          "agent_name": null,
+          "job_status": "pending",
+          "tracking_url": "https://jungl.ml/e94VdGaad",
+          "created_at": "2025-03-13 11:27:57.036780+00:00",
+          "updated_at": "2025-03-13 11:27:57.036780+00:00"
+        }
+      ]
+    },
+    "whatsapp_messages": {
+      "name": "whatsapp_messages",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "message_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "order_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "invoice_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "invoice_number",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "destination",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "status",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "raw_payload",
+          "data_type": "jsonb",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "sample_data": null
+    },
+    "whatsapp_notifications": {
+      "name": "whatsapp_notifications",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "message_id",
+          "data_type": "character varying",
+          "character_maximum_length": 64,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "order_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "phone_number",
+          "data_type": "character varying",
+          "character_maximum_length": 16,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "template_id",
+          "data_type": "character varying",
+          "character_maximum_length": 64,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "status",
+          "data_type": "character varying",
+          "character_maximum_length": 20,
+          "column_default": "'pending'",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "whatsapp_notifications_order_id_fkey",
+          "column_name": "order_id",
+          "foreign_table_schema": "public",
+          "foreign_table_name": "orders",
+          "foreign_column_name": "order_id"
+        }
+      ],
+      "sample_data": null
+    },
+    "zoho_config": {
+      "name": "zoho_config",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "store_id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "organization_id",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "tax_settings",
+          "data_type": "jsonb",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "account_settings",
+          "data_type": "jsonb",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "sample_data": [
+        {
+          "id": "bf8d1305-8205-4653-bc7c-f2bd254f0f99",
+          "store_id": null,
+          "organization_id": "60037206983",
+          "tax_settings": {
+            "0": {
+              "percentage": 0,
+              "tax_id": "2325214000000034169",
+              "tax_name": "GST0"
+            },
+            "12": {
+              "percentage": 12,
+              "tax_id": "2325214000000034181",
+              "tax_name": "GST12"
+            },
+            "18": {
+              "percentage": 18,
+              "tax_id": "2325214000000034187",
+              "tax_name": "GST18"
+            },
+            "28": {
+              "percentage": 28,
+              "tax_id": "2325214000000034193",
+              "tax_name": "GST28"
+            },
+            "5": {
+              "percentage": 5,
+              "tax_id": "2325214000000034175",
+              "tax_name": "GST5"
+            }
+          },
+          "account_settings": null,
+          "created_at": "2025-02-28 03:59:28.460432+00:00",
+          "updated_at": "2025-02-28 03:59:28.460432+00:00"
+        }
+      ]
+    },
+    "zoho_tokens": {
+      "name": "zoho_tokens",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "uuid",
+          "character_maximum_length": null,
+          "column_default": "gen_random_uuid()",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "token",
+          "data_type": "character varying",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "expires_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": null,
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "is_valid",
+          "data_type": "boolean",
+          "character_maximum_length": null,
+          "column_default": "true",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "character_maximum_length": null,
+          "column_default": "current_timestamp()",
+          "is_nullable": "YES"
+        }
+      ],
+      "primary_keys": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "sample_data": null
+    }
+  }
+}
