@@ -4,9 +4,8 @@ import os
 import json
 from pathlib import Path
 import sys
-import base64
 
-# Add parent directory to path to allow importing Core_Scripts modules
+# Setup module path for Core_Scripts access
 parent_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(parent_dir))
 
@@ -29,12 +28,12 @@ except ImportError as e:
     print(f"❌ Error importing CrewAIVisualization: {e}")
     VISUALIZATION_AVAILABLE = False
 
-# ---- Config ----
+# Constants
 RESULTS_DIR = parent_dir / "Run_Results"
 VISUALS_DIR = parent_dir / "visuals"
 KB_FILE = parent_dir / "knowledge" / "sales_analysis_results.md"
 
-# ---- Utils ----
+# ---- Helper Functions ----
 
 def get_latest_result_file(extension=".json"):
     """Find the most recent result file with the given extension."""
@@ -43,20 +42,59 @@ def get_latest_result_file(extension=".json"):
 
 def load_json_data(filepath):
     """Load JSON data from a file."""
-    with open(filepath, "r") as f:
-        return json.load(f)
+    try:
+        with open(filepath, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading JSON: {e}")
+        return {}
 
-def load_markdown(filepath):
-    """Load markdown content from a file."""
-    with open(filepath, "r") as f:
-        return f.read()
+def check_kb_freshness():
+    """Check freshness of the knowledge base and return status and timestamp."""
+    if not KB_FILE.exists():
+        return "❌ Missing", "N/A"
+    
+    timestamp = None
+    try:
+        with open(KB_FILE, "r") as f:
+            for line in f:
+                if "## Full Analysis on" in line:
+                    ts_str = line.replace("## Full Analysis on", "").strip()
+                    try:
+                        timestamp = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+                        break  # Use the first (most recent) timestamp found
+                    except:
+                        continue
+    except Exception as e:
+        print(f"Error reading KB file: {e}")
+    
+    # Fallback to file modification time if no timestamp found in content
+    if not timestamp:
+        try:
+            timestamp = datetime.fromtimestamp(KB_FILE.stat().st_mtime)
+        except:
+            return "🟠 Unknown", "N/A"
+    
+    # Determine freshness (less than 7 days is considered fresh)
+    delta_days = (datetime.now() - timestamp).days
+    
+    if delta_days <= 1:
+        freshness = "🟢 Very fresh (today)"
+    elif delta_days <= 7:
+        freshness = "🟢 Fresh"
+    elif delta_days <= 14:
+        freshness = "🟠 Stale"
+    else:
+        freshness = "🔴 Very stale"
+    
+    return freshness, timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 def display_visualizations():
     """Display the most recent visualizations from visuals directory."""
     global VISUALIZATION_AVAILABLE
     
     if not VISUALS_DIR.exists():
-        st.warning("Visualizations directory does not exist.")
+        st.info("No visualizations directory found.")
         return
     
     try:
@@ -68,12 +106,10 @@ def display_visualizations():
 
     if not image_files and not html_files:
         if not VISUALIZATION_AVAILABLE:
-            st.warning("CrewAI Visualization module is not available. Some features may be limited.")
+            st.info("No visualizations found. CrewAI Visualization module is not available.")
         else:
             st.info("No visualizations found.")
         return
-
-    st.subheader("📊 Visualizations")
 
     # Display up to 3 most recent images
     for img in image_files[:3]:
@@ -91,32 +127,6 @@ def display_visualizations():
         except Exception as e:
             st.error(f"Error displaying HTML {html.name}: {e}")
 
-def check_kb_freshness():
-    """Check freshness of the knowledge base and return status and timestamp."""
-    if not KB_FILE.exists():
-        return "❌ Not found", None
-    
-    timestamp = None
-    with open(KB_FILE, "r") as f:
-        for line in f:
-            if "## Full Analysis on" in line:
-                ts_str = line.replace("## Full Analysis on", "").strip()
-                try:
-                    timestamp = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
-                    break  # Use the first (most recent) timestamp found
-                except:
-                    continue
-    
-    # Fallback to file modification time if no timestamp found in content
-    if not timestamp:
-        timestamp = datetime.fromtimestamp(KB_FILE.stat().st_mtime)
-    
-    # Determine freshness (less than 7 days is considered fresh)
-    delta_days = (datetime.now() - timestamp).days
-    freshness = "🟢 Fresh" if delta_days < 7 else "🟠 Stale"
-    
-    return freshness, timestamp.strftime("%Y-%m-%d %H:%M:%S")
-
 def get_router_logs():
     """Get list of router conversation logs, sorted by most recent first."""
     router_logs_dir = parent_dir / "Run_Results" / "router_logs"
@@ -126,8 +136,7 @@ def get_router_logs():
     log_files = sorted(router_logs_dir.glob("conversation_*.md"), key=os.path.getmtime, reverse=True)
     return log_files
 
-# ---- UI ----
-
+# ---- App Setup ----
 st.set_page_config(
     page_title="Plazza AI Chat",
     layout="wide",
@@ -136,63 +145,49 @@ st.set_page_config(
 
 st.title("💬 Plazza AI — Intelligent Chat & Analytics")
 
-# ---- Chat Tabs ----
-tab1, tab2 = st.tabs(["Standard Chat", "Advanced Router"])
+# ---- Chat Mode Selection ----
+chat_mode = st.radio("Select Chat Mode:", ["🧠 AI Orchestrator", "⚡ Fast Chat (Standard)"])
+st.markdown("---")
 
-with tab1:
-    st.subheader("Standard Chat Interface")
-    standard_input = st.text_input("Ask a question:", key="standard_input")
-    
-    if standard_input and st.button("Submit to Standard Chat"):
-        with st.spinner("Processing with Standard Chat..."):
-            try:
-                # Import here to avoid loading issues
-                try:
-                    from Core_Scripts.plazza_chat import PlazzaChat
-                except ImportError:
-                    st.error("Unable to import PlazzaChat. Make sure Core_Scripts is in your Python path.")
-                    st.info("Current path includes: " + ", ".join(sys.path))
-                    st.stop()
-                
-                pc = PlazzaChat()
-                result = pc.run_chat(standard_input)
-                
-                st.markdown(result)
-                st.session_state["last_input"] = standard_input
-                st.success("Query processed successfully!")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-                st.info("Check the console for detailed error information.")
-                import traceback
-                st.code(traceback.format_exc())
+# ---- User Input ----
+with st.form("chat_form"):
+    user_input = st.text_input("Ask a question:")
+    submitted = st.form_submit_button("Submit")
 
-with tab2:
-    st.subheader("Advanced Router (AI Orchestrator)")
-    router_input = st.text_input("Ask a question:", key="router_input")
-    
-    if router_input and st.button("Submit to Advanced Router"):
-        with st.spinner("Processing with AI Orchestrator..."):
-            try:
-                # Import here to avoid loading issues
+# ---- Handle Submission ----
+if submitted and user_input:
+    with st.spinner("Processing your request..."):
+        try:
+            if chat_mode == "🧠 AI Orchestrator":
                 try:
                     from Core_Scripts.advanced_router import run_advanced_router
-                except ImportError:
-                    st.error("Unable to import run_advanced_router. Make sure Core_Scripts is in your Python path.")
-                    st.info("Current path includes: " + ", ".join(sys.path))
+                except ImportError as e:
+                    st.error(f"Error importing Advanced Router: {e}")
+                    st.info("Check that Core_Scripts directory is properly configured.")
                     st.stop()
                 
-                result = run_advanced_router(router_input)
+                result = run_advanced_router(user_input)
+            else:
+                try:
+                    from Core_Scripts.plazza_chat import PlazzaChat
+                except ImportError as e:
+                    st.error(f"Error importing PlazzaChat: {e}")
+                    st.info("Check that Core_Scripts directory is properly configured.")
+                    st.stop()
                 
-                st.markdown(result)
-                st.session_state["last_router_input"] = router_input
-                st.success("Query processed successfully!")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-                st.info("Check the console for detailed error information.")
-                import traceback
-                st.code(traceback.format_exc())
+                chat_handler = PlazzaChat()
+                result = chat_handler.run_chat(user_input)
+            
+            st.session_state["last_input"] = user_input
+            st.session_state["last_result"] = result
+            st.success("Query processed successfully!")
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
+            st.stop()
 
-# ---- Sidebar ----
+# ---- Sidebar Status ----
 with st.sidebar:
     st.header("📚 System Status")
     
@@ -200,8 +195,7 @@ with st.sidebar:
     st.subheader("Knowledge Base")
     status, ts = check_kb_freshness()
     st.markdown(f"**Status**: {status}")
-    if ts:
-        st.markdown(f"**Last Updated**: {ts}")
+    st.markdown(f"**Last Updated**: {ts}")
     
     st.markdown("---")
     
@@ -226,22 +220,36 @@ with st.sidebar:
     if logs:
         for i, log in enumerate(logs[:5]):  # Show 5 most recent logs
             with st.expander(f"Log {log.stem}"):
-                content = load_markdown(log)
-                st.markdown(content)
+                try:
+                    with open(log, "r") as f:
+                        st.markdown(f.read())
+                except Exception as e:
+                    st.error(f"Error reading log file: {e}")
     else:
         st.info("No router logs available.")
 
-# ---- Output Area ----
-st.markdown("---")
-st.subheader("🧠 Last Chat Result")
+# ---- Main Content Area ----
 
-latest_md = get_latest_result_file(".md")
-if latest_md:
-    st.markdown(load_markdown(latest_md), unsafe_allow_html=True)
+# Show result if we just submitted a query
+if submitted and "last_result" in st.session_state:
+    st.markdown("### 🧠 Chat Result")
+    st.markdown(st.session_state["last_result"])
+# Otherwise show last chat result from file
 else:
-    st.info("No chat result found yet.")
+    st.markdown("### 🧠 Last Chat Result")
+    latest_md = get_latest_result_file(".md")
+    if latest_md:
+        try:
+            with open(latest_md, "r") as f:
+                st.markdown(f.read(), unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error reading last chat result: {e}")
+    else:
+        st.info("No chat result found yet.")
 
 # ---- Visualizations ----
+st.markdown("---")
+st.subheader("📊 Visualizations")
 display_visualizations()
 
 # ---- Footer ----

@@ -91,7 +91,7 @@ def get_chat_history_stats():
 
 # ---- Main Dashboard ----
 def display_dashboard():
-    st.title("📊 Plazza AI System Dashboard")
+    st.title("📊 Plazza AI — System Dashboard")
     
     # System Overview Cards
     st.subheader("System Overview")
