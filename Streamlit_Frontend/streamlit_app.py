@@ -10,6 +10,25 @@ import base64
 parent_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(parent_dir))
 
+# Ensure Core_Scripts is in the path
+core_scripts_dir = parent_dir / "Core_Scripts"
+if core_scripts_dir.exists() and str(core_scripts_dir) not in sys.path:
+    sys.path.append(str(core_scripts_dir))
+
+# Debug import paths
+print("Python import paths:")
+for p in sys.path:
+    print(f"- {p}")
+
+# Check for module availability
+try:
+    from Core_Scripts.crewai_visualization import CrewAIVisualization
+    print("✅ Successfully imported CrewAIVisualization")
+    VISUALIZATION_AVAILABLE = True
+except ImportError as e:
+    print(f"❌ Error importing CrewAIVisualization: {e}")
+    VISUALIZATION_AVAILABLE = False
+
 # ---- Config ----
 RESULTS_DIR = parent_dir / "Run_Results"
 VISUALS_DIR = parent_dir / "visuals"
@@ -34,24 +53,43 @@ def load_markdown(filepath):
 
 def display_visualizations():
     """Display the most recent visualizations from visuals directory."""
-    image_files = sorted(VISUALS_DIR.glob("*.png"), key=os.path.getmtime, reverse=True)
-    html_files = sorted(VISUALS_DIR.glob("*.html"), key=os.path.getmtime, reverse=True)
+    global VISUALIZATION_AVAILABLE
+    
+    if not VISUALS_DIR.exists():
+        st.warning("Visualizations directory does not exist.")
+        return
+    
+    try:
+        image_files = sorted(VISUALS_DIR.glob("*.png"), key=os.path.getmtime, reverse=True)
+        html_files = sorted(VISUALS_DIR.glob("*.html"), key=os.path.getmtime, reverse=True)
+    except Exception as e:
+        st.error(f"Error accessing visualization files: {e}")
+        return
 
     if not image_files and not html_files:
-        st.info("No visualizations found.")
+        if not VISUALIZATION_AVAILABLE:
+            st.warning("CrewAI Visualization module is not available. Some features may be limited.")
+        else:
+            st.info("No visualizations found.")
         return
 
     st.subheader("📊 Visualizations")
 
     # Display up to 3 most recent images
     for img in image_files[:3]:
-        st.image(str(img), caption=img.name)
+        try:
+            st.image(str(img), caption=img.name)
+        except Exception as e:
+            st.error(f"Error displaying image {img.name}: {e}")
 
     # Display up to 3 most recent HTML visualizations
     for html in html_files[:3]:
         st.markdown(f"### {html.name}")
-        with open(html, "r", encoding="utf-8") as f:
-            st.components.v1.html(f.read(), height=500, scrolling=True)
+        try:
+            with open(html, "r", encoding="utf-8") as f:
+                st.components.v1.html(f.read(), height=500, scrolling=True)
+        except Exception as e:
+            st.error(f"Error displaying HTML {html.name}: {e}")
 
 def check_kb_freshness():
     """Check freshness of the knowledge base and return status and timestamp."""
@@ -109,7 +147,13 @@ with tab1:
         with st.spinner("Processing with Standard Chat..."):
             try:
                 # Import here to avoid loading issues
-                from Core_Scripts.plazza_chat import PlazzaChat
+                try:
+                    from Core_Scripts.plazza_chat import PlazzaChat
+                except ImportError:
+                    st.error("Unable to import PlazzaChat. Make sure Core_Scripts is in your Python path.")
+                    st.info("Current path includes: " + ", ".join(sys.path))
+                    st.stop()
+                
                 pc = PlazzaChat()
                 result = pc.run_chat(standard_input)
                 
@@ -118,6 +162,9 @@ with tab1:
                 st.success("Query processed successfully!")
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+                st.info("Check the console for detailed error information.")
+                import traceback
+                st.code(traceback.format_exc())
 
 with tab2:
     st.subheader("Advanced Router (AI Orchestrator)")
@@ -127,7 +174,13 @@ with tab2:
         with st.spinner("Processing with AI Orchestrator..."):
             try:
                 # Import here to avoid loading issues
-                from Core_Scripts.advanced_router import run_advanced_router
+                try:
+                    from Core_Scripts.advanced_router import run_advanced_router
+                except ImportError:
+                    st.error("Unable to import run_advanced_router. Make sure Core_Scripts is in your Python path.")
+                    st.info("Current path includes: " + ", ".join(sys.path))
+                    st.stop()
+                
                 result = run_advanced_router(router_input)
                 
                 st.markdown(result)
@@ -135,6 +188,9 @@ with tab2:
                 st.success("Query processed successfully!")
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+                st.info("Check the console for detailed error information.")
+                import traceback
+                st.code(traceback.format_exc())
 
 # ---- Sidebar ----
 with st.sidebar:
