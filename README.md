@@ -192,6 +192,30 @@ Required environment variables:
 - `VISUALIZATION_OUTPUT_DIR`: Directory for visualization outputs
 - `DEFAULT_ANALYSIS_FILE`: Default input file for visualizations
 
+## Web Interface
+
+A Streamlit-based web interface is available in the `/Streamlit_Frontend` directory.
+
+### Features
+- Dual chat interface (Standard Chat and Advanced Router)
+- System status dashboard with knowledge base freshness monitoring
+- Visualization display for generated charts
+- Router logs and performance metrics
+
+### Running the Web Interface
+```bash
+# Install requirements
+pip install -r Streamlit_Frontend/requirements.txt
+
+# Launch the web app
+streamlit run Streamlit_Frontend/streamlit_app.py
+```
+
+The Dashboard view is also available:
+```bash
+streamlit run Streamlit_Frontend/dashboard.py
+```
+
 ## Documentation
 
 For comprehensive documentation about the system architecture, implementation details, and development history, see [CLAUDE.md](CLAUDE.md).
