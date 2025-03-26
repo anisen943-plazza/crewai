@@ -61,13 +61,3 @@ logs/
 
 #CrewAI suggestions
 CrewAI_Assistant_suggestions.txt
-
-#Archive
-archived/
-
-#history
-.history/
-
-#Virtual Enviroment
-/plazza_analytics/venv_py311/
-

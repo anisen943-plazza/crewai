@@ -1,0 +1,24 @@
+[project]
+name = "plazza_analytics"
+version = "0.1.0"
+description = "plazza_analytics using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "crewai[tools]>=0.105.0,<1.0.0",
+    "pyyaml>=6.0"
+]
+
+[project.scripts]
+plazza_analytics = "plazza_analytics.main:run"
+run_crew = "plazza_analytics.main:run"
+train = "plazza_analytics.main:train"
+replay = "plazza_analytics.main:replay"
+test = "plazza_analytics.main:test"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "crew"

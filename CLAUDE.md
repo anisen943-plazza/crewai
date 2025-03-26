@@ -3124,3 +3124,221 @@ This section provides a comprehensive overview of all major enhancements impleme
    - Develop executive summaries with prioritized insights (Week 4-6)
    - Implement alert system for anomaly detection (Week 7-9)
    - Create collaborative annotation system for insights (Week 10-12)
+
+## Plazza Analytics - CrewAI Project Setup Guide
+
+### CrewAI Version Compatibility Issue
+
+The Plazza Analytics project is built using an older version of CrewAI that has API differences with the current version. Specifically:
+
+1. **API Changes**: 
+   - The project is trying to import `AgentConfig` and `TaskConfig` from `crewai.config`, which doesn't exist in newer versions
+   - The YAML configuration loading mechanism has been removed or significantly changed in newer versions
+
+2. **Required Modifications**:
+   ```python
+   # Original imports in crew.py
+   from crewai import Crew, Process
+   from crewai.config import AgentConfig, TaskConfig  # This no longer exists
+   
+   # Modified imports for newer CrewAI versions
+   import yaml
+   from crewai import Crew, Process, Agent, Task
+   ```
+
+3. **Agent & Task Creation**:
+   - Original: Used `AgentConfig` and `TaskConfig` classes to load from YAML
+   - Modified: Need to load YAML directly and manually instantiate Agent and Task objects
+
+### Proposed Modification (Without Changing Structure)
+
+To make the project compatible with current CrewAI versions while maintaining the same structure:
+
+```python
+# Modified version of crew.py
+import yaml
+from crewai import Crew, Process, Agent, Task
+
+def create_plazza_crew():
+    # Load agents configuration from YAML file
+    with open("src/plazza_analytics/config/agents.yaml", "r") as f:
+        agents_config = yaml.safe_load(f)
+    
+    # Load tasks configuration from YAML file
+    with open("src/plazza_analytics/config/tasks.yaml", "r") as f:
+        tasks_config = yaml.safe_load(f)
+    
+    # Initialize agents
+    conversation_orchestrator = Agent(
+        role=agents_config["conversation_orchestrator"]["role"],
+        goal=agents_config["conversation_orchestrator"]["goal"],
+        backstory=agents_config["conversation_orchestrator"]["backstory"],
+        allow_delegation=True,
+        verbose=True
+    )
+    
+    data_analyst = Agent(
+        role=agents_config["data_analyst"]["role"],
+        goal=agents_config["data_analyst"]["goal"],
+        backstory=agents_config["data_analyst"]["backstory"],
+        verbose=True
+    )
+    
+    chat_data_analyst = Agent(
+        role=agents_config["chat_data_analyst"]["role"],
+        goal=agents_config["chat_data_analyst"]["goal"],
+        backstory=agents_config["chat_data_analyst"]["backstory"],
+        verbose=True
+    )
+    
+    visualization_specialist = Agent(
+        role=agents_config["visualization_specialist"]["role"],
+        goal=agents_config["visualization_specialist"]["goal"],
+        backstory=agents_config["visualization_specialist"]["backstory"],
+        # Note: actual tool instances would need to be implemented
+        tools=["GeneralVisualizationTool"],
+        verbose=True
+    )
+    
+    business_strategy_advisor = Agent(
+        role=agents_config["business_strategy_advisor"]["role"],
+        goal=agents_config["business_strategy_advisor"]["goal"],
+        backstory=agents_config["business_strategy_advisor"]["backstory"],
+        verbose=True
+    )
+    
+    # Initialize tasks
+    handle_user_query = Task(
+        description=tasks_config["handle_user_query"]["description"],
+        expected_output=tasks_config["handle_user_query"]["expected_output"],
+        agent=conversation_orchestrator
+    )
+    
+    # Define crew
+    return Crew(
+        agents=[
+            conversation_orchestrator,
+            data_analyst,
+            chat_data_analyst,
+            visualization_specialist,
+            business_strategy_advisor
+        ],
+        tasks=[handle_user_query],
+        process=Process.hierarchical,
+        verbose=True
+    )
+```
+
+### Additional Implementation Challenges
+
+1. **Tools Implementation**:
+   - The tools specified in the YAML like `GeneralVisualizationTool` need to be actual tool instances
+   - These would need to be implemented based on the current tools in the project
+   - The project may use custom tools that need to be properly integrated
+
+2. **Template Handling**:
+   - The task description contains templates like `{user_query}` that need special handling
+   - The original CrewAI version may have had built-in template handling
+
+3. **Python Version**:
+   - CrewAI requires Python 3.10-3.12 (not 3.13)
+   - A virtual environment with Python 3.11 is recommended
+
+4. **CrewAI Version**:
+   - Current version (0.108.0) contains significant API differences
+   - The project was likely built with a much earlier version (possibly 0.30.0 or earlier)
+
+### Project Structure Overview
+
+The Plazza Analytics project is organized as follows:
+
+1. **Configuration Files**:
+   - `agents.yaml`: Defines agent roles, goals, backstories, and tools
+   - `tasks.yaml`: Defines task descriptions, expected outputs, and templates
+
+2. **Core Modules**:
+   - `crew.py`: Creates the CrewAI system with agents and tasks
+   - `main.py`: Entry point that accepts user input and runs the crew
+
+3. **Agent Architecture**:
+   - Conversation Orchestrator: Routes queries to appropriate specialists
+   - Data Analyst: Deep business analysis and schema discovery
+   - Chat Data Analyst: Quick answers using knowledge base or direct queries
+   - Visualization Specialist: Creates charts from analysis data
+   - Business Strategy Advisor: Proposes data-driven business strategies
+
+### Environment Setup Requirements
+
+1. **Virtual Environment**:
+   ```bash
+   python3.11 -m venv venv_py311
+   source venv_py311/bin/activate
+   pip install crewai
+   pip install pyyaml
+   ```
+
+2. **Dependencies**:
+   - CrewAI and its dependencies
+   - PyYAML for configuration parsing
+   - Potentially custom tools for database access and visualization
+
+### Recommendations
+
+1. **Short-Term**:
+   - Update `crew.py` to work with current CrewAI version
+   - Implement the necessary tool classes
+   - Update main.py to create the crew using the updated approach
+
+2. **Medium-Term**:
+   - Consider migrating to CrewAI's official templates
+   - Use `crewai install` for dependency management
+   - Standardize the project structure according to CrewAI best practices
+
+3. **Long-Term**:
+   - Refactor to use CrewAI's latest features like agent memory
+   - Consider Docker containerization for deployment
+   - Implement proper testing framework
+
+## Database Connections
+
+The project connects to multiple CockroachDB databases:
+
+```
+DATABASE_URL="postgresql://aniruddha:qls3UibsCfTOXA9P7CbgnQ@plazza-catalogue-5312.jxf.gcp-us-central1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full"
+DATABASE_URL_ERP="postgresql://aniruddha:qls3UibsCfTOXA9P7CbgnQ@plazza-catalogue-5312.jxf.gcp-us-central1.cockroachlabs.cloud:26257/plazza_erp?sslmode=verify-full"
+DATABASE_URL_USER="postgresql://aniruddha:qls3UibsCfTOXA9P7CbgnQ@plazza-catalogue-5312.jxf.gcp-us-central1.cockroachlabs.cloud:26257/user_events?sslmode=verify-full"
+DATABASE_URL_USER_TRANSACTIONS="postgresql://aniruddha:qls3UibsCfTOXA9P7CbgnQ@plazza-catalogue-5312.jxf.gcp-us-central1.cockroachlabs.cloud:26257/user_transactions?sslmode=verify-full"
+```
+
+Each database serves a different purpose:
+
+1. **defaultdb**: Core product catalog
+2. **plazza_erp**: Business operations
+3. **user_events**: User activity tracking
+4. **user_transactions**: Customer and order management
+
+The CockroachDBTool implementation needs to be updated to work with the current CrewAI version while maintaining the ability to query these databases.
+
+## Custom Tools Implementation
+
+The project includes several custom tools that need to be implemented:
+
+1. **CockroachDBTool**: 
+   - Connects to multiple databases
+   - Executes SQL queries against CockroachDB
+   - Handles schema discovery and data retrieval
+
+2. **GeneralVisualizationTool**:
+   - Creates visualizations from analysis data
+   - Parses markdown content to extract metrics
+   - Generates charts and dashboards
+
+3. **MethodologyTool**:
+   - Standardizes and documents queries
+   - Provides transparency in data analysis
+
+4. **RetentionAnalysisTool**:
+   - Specialized for customer retention metrics
+   - May need to connect to user_transactions database
+
+Proper implementation of these tools is critical for the system to function correctly. Each tool needs to be defined as a class extending `BaseTool` from CrewAI.
