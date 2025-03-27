@@ -14,7 +14,52 @@ def create_plazza_crew():
     agent_config = load_yaml_config(agents_yaml_path)
     task_config = load_yaml_config(tasks_yaml_path)
     
-    # Initialize tools
+    # Set up knowledge sources with optimized parameters
+    try:
+        # In newer versions of CrewAI, the Knowledge class is imported directly from crewai
+        from crewai import Knowledge
+        # The TextFileKnowledgeSource is still in a similar location
+        try:
+            # Try the new import path first
+            from crewai.knowledge_source.text_file_knowledge_source import TextFileKnowledgeSource
+        except ImportError:
+            # Fall back to old import path
+            from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+        
+        # Create knowledge sources with optimal chunking parameters
+        # Use relative paths for CrewAI's knowledge system
+        knowledge_files = [
+            {"file": "sales_analysis.md", "domain": "sales", "type": "business_intelligence"},
+            {"file": "database_schemas.md", "domain": "technical", "type": "database_schema"},
+            {"file": "customer_insights.md", "domain": "customer", "type": "retention_analysis"}
+        ]
+        
+        # Create sources
+        knowledge_sources = []
+        for kf in knowledge_files:
+            try:
+                source = TextFileKnowledgeSource(
+                    file_paths=[kf["file"]],
+                    chunk_size=800,
+                    chunk_overlap=200,
+                    metadata={"domain": kf["domain"], "type": kf["type"]}
+                )
+                knowledge_sources.append(source)
+            except Exception as e:
+                print(f"Warning: Could not create knowledge source for {kf['file']}: {e}")
+        
+        # Create knowledge collection
+        knowledge = Knowledge(
+            collection_name="plazza_knowledge",
+            sources=knowledge_sources
+        ) if knowledge_sources else None
+    
+    except ImportError as e:
+        print(f"Warning: Could not set up knowledge: {e}")
+        knowledge = None
+    
+    # Initialize tools with names that match YAML references
+    from crewai.tools import BaseTool
     from plazza_analytics.tools.cockroach_db_tool import CockroachDBTool
     
     try:
@@ -22,36 +67,44 @@ def create_plazza_crew():
         from plazza_analytics.tools.retention_analysis_tool import RetentionAnalysisTool
         from plazza_analytics.tools.previous_analysis_tool import PreviousAnalysisTool
         from plazza_analytics.tools.general_visualization_tool import GeneralVisualizationTool
+        from plazza_analytics.tools.save_knowledge_tool import SaveKnowledgeTool
         
-        # Create the tools
+        # Create tool instances with variable names matching those in YAML
+        # These names must exactly match the strings in the agents.yaml file
         cockroach_db_tool = CockroachDBTool()
         methodology_tool = MethodologyTool()
         retention_analysis_tool = RetentionAnalysisTool()
         previous_analysis_tool = PreviousAnalysisTool()
-        general_visualization_tool = GeneralVisualizationTool()
+        save_knowledge_tool = SaveKnowledgeTool()
+        # Import the class and initialize it with a different name first to avoid name collision
+        GeneralVisualizationToolClass = GeneralVisualizationTool
+        GeneralVisualizationTool = GeneralVisualizationToolClass()  # Name matches case in YAML
         
-        # Tool mapping for each agent
-        agent_tools = {
-            "data_analyst": [cockroach_db_tool, retention_analysis_tool],
-            "chat_data_analyst": [cockroach_db_tool, methodology_tool, retention_analysis_tool, previous_analysis_tool],
-            "visualization_specialist": [general_visualization_tool]
-        }
     except ImportError as e:
         print(f"Warning: Could not import all tools: {e}")
-        # Create fallback version with just the CockroachDBTool
-        cockroach_db_tool = CockroachDBTool()
-        
-        # Minimal tool mapping for each agent
-        agent_tools = {
-            "data_analyst": [cockroach_db_tool],
-            "chat_data_analyst": [cockroach_db_tool],
-            "visualization_specialist": []
-        }
     
-    # Create agent instances with appropriate tools
+    # Create a mapping of tool names to tool instances
+    tool_mapping = {
+        "cockroach_db_tool": cockroach_db_tool,
+        "methodology_tool": methodology_tool,
+        "retention_analysis_tool": retention_analysis_tool,
+        "previous_analysis_tool": previous_analysis_tool,
+        "save_knowledge_tool": save_knowledge_tool,
+        "GeneralVisualizationTool": GeneralVisualizationTool
+    }
+    
+    # Create agent instances directly from YAML config
     agents = {}
     for agent_name, agent_data in agent_config.items():
-        tools_for_agent = agent_tools.get(agent_name.lower().replace(" ", "_"), [])
+        # Fetch tool names from YAML and resolve to actual tool instances
+        tool_names = agent_data.get("tools", [])
+        agent_tools = []
+        
+        for name in tool_names:
+            if name in tool_mapping:
+                agent_tools.append(tool_mapping[name])
+            else:
+                print(f"⚠️ Warning: Tool '{name}' is not defined in crew.py")
         
         agents[agent_name] = Agent(
             role=agent_data.get("role", ""),
@@ -59,7 +112,9 @@ def create_plazza_crew():
             backstory=agent_data.get("backstory", ""),
             verbose=True,
             allow_delegation=agent_name == "conversation_orchestrator",
-            tools=tools_for_agent
+            tools=agent_tools,  # Pass resolved tools here
+            knowledge=knowledge,  # Add the knowledge source
+            memory=True  # Enable memory for context
         )
     
     # Initialize tasks with agents

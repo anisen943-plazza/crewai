@@ -4,9 +4,9 @@ import psycopg2.extras
 import json
 import re
 from datetime import datetime
-from typing import Literal, Optional, Dict, Any
+from typing import Literal, Optional, Dict, Any, List
 from crewai.tools import BaseTool
-from plazza_analytics.tools.config import DB_CONNECTION_VARS, DB_SCHEMA_CACHE
+from pydantic import BaseModel, Field
 
 # Version History
 # 2025-03-26: Updated for CrewAI v0.108.0+ compatibility
@@ -22,10 +22,57 @@ from plazza_analytics.tools.config import DB_CONNECTION_VARS, DB_SCHEMA_CACHE
 #   - Removed custom schema classes
 #   - Enhanced parameter validation with defensive coding
 #   - Simplified implementation while maintaining functionality
+# 2025-03-28: Fixed recurring issues
+#   - Added consistent type casting for contact_id fields
+#   - Enhanced test data filtering with phone/email patterns
+#   - Fixed contact details retrieval with proper joins
+#   - Added better error handling and troubleshooting guidance
+#   - Added helper to detect and exclude test users
 
-# Class-level caches for performance
+# Module-level caches for performance
 _retention_cache = None  # Cached results for reuse
 _schema_cache = {}  # Schema information for each table
+
+# Database connection configuration (moved to module level for reuse)
+DB_CONNECTION_VARS = {
+    "user_transactions": "DATABASE_URL_USER_TRANSACTIONS",
+    "defaultdb": "DATABASE_URL",
+    "plazza_erp": "DATABASE_URL_ERP",
+    "user_events": "DATABASE_URL_USER"
+}
+
+# Known test data patterns
+TEST_PHONE_NUMBERS = {'8850959517', '9999999999', '9876543210', '0000000000'}
+TEST_EMAIL_PATTERNS = ['test', 'example.com', 'noreply', 'nowhere']
+TEST_ORDER_PATTERNS = ['TEST', 'POD-WEBHOOK', 'POD-TEST']
+
+# Schema-level cache and DB_SCHEMA_CACHE for caching schema info across runs
+DB_SCHEMA_CACHE = {}
+
+# Create Pydantic schema for tool parameters
+class RetentionAnalysisArgs(BaseModel):
+    generate_visuals: bool = Field(
+        default=True, 
+        description="Whether to generate visualizations"
+    )
+    force_refresh: bool = Field(
+        default=False, 
+        description="Force a refresh of the analysis, ignoring the cache"
+    )
+    query_intent: Literal["general", "repeat_customers"] = Field(
+        default="general", 
+        description="Type of analysis to perform ('general' or 'repeat_customers')"
+    )
+    limit: int = Field(
+        default=10, 
+        description="Maximum number of results to return for detailed queries",
+        ge=1,
+        le=100
+    )
+    include_contact_details: bool = Field(
+        default=False, 
+        description="Whether to include customer names and contact information"
+    )
 
 class RetentionAnalysisTool(BaseTool):
     """Retention Analysis Tool for CrewAI.
@@ -54,6 +101,10 @@ class RetentionAnalysisTool(BaseTool):
     - Find repeat customers: retention_analysis_tool.run(query_intent="repeat_customers")
     - Customer details: retention_analysis_tool.run(query_intent="repeat_customers", include_contact_details=True)
     - Limit results: retention_analysis_tool.run(query_intent="repeat_customers", limit=5)"""
+    
+    # Important: define args_schema for CrewAI v0.108.0+ compatibility
+    # Make sure it's properly annotated to avoid Pydantic errors
+    args_schema: type[RetentionAnalysisArgs] = RetentionAnalysisArgs
     
     def run(self, 
             generate_visuals: bool = True, 
@@ -379,7 +430,13 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
                     {"source_table": "order_items", "source_column": "product_id", 
                      "target_table": "products", "target_column": "product_id"},
                     {"source_table": "airtable_order_items", "source_column": "product_id", 
-                     "target_table": "airtable_products", "target_column": "product_id"}
+                     "target_table": "airtable_products", "target_column": "product_id"},
+                     
+                    # Contact phone relationships
+                    {"source_table": "contact_phones", "source_column": "contact_id", 
+                     "target_table": "contacts", "target_column": "id"},
+                    {"source_table": "airtable_contact_phones", "source_column": "contact_id", 
+                     "target_table": "airtable_contacts", "target_column": "id"}
                 ]
                 
                 # Add the known relationships if both tables exist
@@ -471,6 +528,39 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
         # No path found
         return None
 
+    def _is_test_data(self, data, field_name, test_patterns):
+        """Check if a field contains test data patterns."""
+        if field_name not in data or data[field_name] is None:
+            return False
+            
+        value = str(data[field_name]).lower()
+        return any(pattern.lower() in value for pattern in test_patterns)
+        
+    def _is_test_user(self, row):
+        """Check if a user record is test data based on various indicators."""
+        # Check known test phone numbers
+        phone = str(row.get('phone_number', '')) if row.get('phone_number') else ""
+        if phone in TEST_PHONE_NUMBERS:
+            return True
+            
+        # Check email for test patterns
+        email = str(row.get('email', '')) if row.get('email') else ""
+        if any(pattern in email.lower() for pattern in TEST_EMAIL_PATTERNS):
+            return True
+            
+        # Check order patterns
+        order_id = str(row.get('order_id', '')) if row.get('order_id') else ""
+        if any(pattern in order_id for pattern in TEST_ORDER_PATTERNS):
+            return True
+            
+        # Additional test user detection - check for common test names
+        first_name = str(row.get('first_name', '')).lower() if row.get('first_name') else ""
+        last_name = str(row.get('last_name', '')).lower() if row.get('last_name') else ""
+        if first_name in ['test', 'dummy', 'example'] or last_name in ['test', 'dummy', 'example']:
+            return True
+            
+        return False
+
     def _generate_safe_discount_query(self, schema_info):
         """Generate a discount query that safely handles missing columns."""
         # Check if item_total exists in both tables
@@ -486,11 +576,13 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
                 WHEN item_total > 0 THEN (1 - bill_total_amount / NULLIF(item_total, 0)) * 100
                 ELSE 0 
             END as discount_pct
-        FROM orders
-        WHERE status = 'paid'
-          AND order_id NOT LIKE '%TEST%'
-          AND order_id NOT LIKE 'POD-WEBHOOK%'
-          AND item_total IS NOT NULL
+        FROM orders o
+        LEFT JOIN contacts c ON o.contact_id = c.id
+        WHERE o.status = 'paid'
+          AND o.order_id NOT LIKE '%TEST%'
+          AND o.order_id NOT LIKE 'POD-WEBHOOK%'
+          AND (c.phone IS NULL OR c.phone NOT IN ('8850959517', '9999999999', '9876543210'))
+          AND (c.email IS NULL OR c.email NOT ILIKE '%test%')
         """
         
         # For Airtable, we need to adapt to the possibility that item_total doesn't exist
@@ -499,12 +591,13 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
             airtable_orders_cte = """
             -- Airtable orders discount data with calculated item_total
             SELECT 
-                ao.contact_id,
+                CAST(ao.contact_id AS text) AS contact_id,
                 CASE 
                     WHEN calculated_total > 0 THEN (1 - ao.bill_total_amount / NULLIF(calculated_total, 0)) * 100
                     ELSE 0 
                 END as discount_pct
             FROM airtable_orders ao
+            LEFT JOIN airtable_contacts ac ON ao.contact_id = ac.id
             LEFT JOIN (
                 SELECT order_id, SUM(COALESCE(selling_price * quantity, 0)) as calculated_total
                 FROM airtable_order_items
@@ -513,6 +606,7 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
             WHERE ao.status = 'paid'
               AND ao.order_id NOT LIKE '%TEST%'
               AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+              AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
               AND items.calculated_total IS NOT NULL
             """
         else:
@@ -520,15 +614,17 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
             airtable_orders_cte = """
             -- Airtable orders discount data
             SELECT 
-                contact_id,
+                CAST(ao.contact_id AS text) AS contact_id,
                 CASE 
                     WHEN item_total > 0 THEN (1 - bill_total_amount / NULLIF(item_total, 0)) * 100
                     ELSE 0 
                 END as discount_pct
-            FROM airtable_orders
-            WHERE status = 'paid'
-              AND order_id NOT LIKE '%TEST%'
-              AND order_id NOT LIKE 'POD-WEBHOOK%'
+            FROM airtable_orders ao
+            LEFT JOIN airtable_contacts ac ON ao.contact_id = ac.id
+            WHERE ao.status = 'paid'
+              AND ao.order_id NOT LIKE '%TEST%'
+              AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+              AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
               AND item_total IS NOT NULL
             """
         
@@ -594,18 +690,23 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
                 -- CTE for regular orders sales
                 WITH regular_sales AS (
                     SELECT SUM(bill_total_amount) as total_sales
-                    FROM orders
-                    WHERE status = 'paid'
-                    AND order_id NOT LIKE '%TEST%'
-                    AND order_id NOT LIKE 'POD-WEBHOOK%'
+                    FROM orders o
+                    LEFT JOIN contacts c ON o.contact_id = c.id
+                    WHERE o.status = 'paid'
+                    AND o.order_id NOT LIKE '%TEST%'
+                    AND o.order_id NOT LIKE 'POD-WEBHOOK%'
+                    AND (c.phone IS NULL OR c.phone NOT IN ('8850959517', '9999999999', '9876543210'))
+                    AND (c.email IS NULL OR c.email NOT ILIKE '%test%')
                 ),
                 -- CTE for airtable orders sales
                 airtable_sales AS (
                     SELECT SUM(bill_total_amount) as total_sales
-                    FROM airtable_orders
-                    WHERE status = 'paid'
-                    AND order_id NOT LIKE '%TEST%'
-                    AND order_id NOT LIKE 'POD-WEBHOOK%'
+                    FROM airtable_orders ao
+                    LEFT JOIN airtable_contacts ac ON ao.contact_id = ac.id
+                    WHERE ao.status = 'paid'
+                    AND ao.order_id NOT LIKE '%TEST%'
+                    AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+                    AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
                 )
                 -- Combine the results
                 SELECT 
@@ -689,116 +790,94 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
         if not base_tables:
             return None, "No order tables found in schema."
         
-        # Find contact table connections
-        contact_joins = []
-        product_joins = []
+        # Create explicit JOIN clauses with proper aliases
+        contact_joins_regular = []
+        contact_joins_airtable = []
+        phone_joins_regular = []
+        phone_joins_airtable = []
         
-        # For standard contacts and orders
-        if "orders" in tables and "contacts" in tables:
-            path = self._find_join_path(graph, "orders", "contacts")
-            if path:
-                for step in path:
-                    contact_joins.append(f"LEFT JOIN {step['to']} ON {step['condition']}")
-                    
-        # For airtable contacts and orders
-        if "airtable_orders" in tables and "airtable_contacts" in tables:
-            path = self._find_join_path(graph, "airtable_orders", "airtable_contacts")
-            if path:
-                for step in path:
-                    if not any(step['to'] in join for join in contact_joins):
-                        contact_joins.append(f"LEFT JOIN {step['to']} ON {step['condition']}")
+        # Check for contacts tables and related tables
+        has_contacts = "contacts" in tables
+        has_airtable_contacts = "airtable_contacts" in tables
+        has_contact_phones = "contact_phones" in tables
+        has_airtable_contact_phones = "airtable_contact_phones" in tables
         
-        # For product information through order_items
-        if "orders" in tables and "order_items" in tables and "products" in tables:
-            path = self._find_join_path(graph, "orders", "order_items")
-            if path and "products" in tables:
-                for step in path:
-                    product_joins.append(f"LEFT JOIN {step['to']} ON {step['condition']}")
+        # For standard contacts and orders - with explicit aliases
+        if has_contacts:
+            contact_joins_regular.append("LEFT JOIN contacts c ON CAST(o.contact_id AS text) = CAST(c.id AS text)")
+            
+            # Add join for contact_phones if it exists
+            if has_contact_phones:
+                phone_joins_regular.append("LEFT JOIN contact_phones cp ON CAST(c.id AS text) = CAST(cp.contact_id AS text)")
                 
-                # Add products join if needed
-                product_path = self._find_join_path(graph, "order_items", "products") 
-                if product_path:
-                    for step in product_path:
-                        product_joins.append(f"LEFT JOIN {step['to']} ON {step['condition']}")
+        # For airtable contacts and orders - with explicit aliases
+        if has_airtable_contacts:
+            contact_joins_airtable.append("LEFT JOIN airtable_contacts ac ON CAST(ao.contact_id AS text) = CAST(ac.id AS text)")
+            
+            # Add join for airtable_contact_phones if it exists
+            if has_airtable_contact_phones:
+                phone_joins_airtable.append("LEFT JOIN airtable_contact_phones acp ON CAST(ac.id AS text) = CAST(acp.contact_id AS text)")
         
-        # For airtable products
-        if "airtable_orders" in tables and "airtable_order_items" in tables and "airtable_products" in tables:
-            path = self._find_join_path(graph, "airtable_orders", "airtable_order_items")
-            if path:
-                for step in path:
-                    if not any(step['to'] in join for join in product_joins):
-                        product_joins.append(f"LEFT JOIN {step['to']} ON {step['condition']}")
-                
-                # Add airtable_products join if needed
-                product_path = self._find_join_path(graph, "airtable_order_items", "airtable_products")
-                if product_path:
-                    for step in product_path:
-                        if not any(step['to'] in join for join in product_joins):
-                            product_joins.append(f"LEFT JOIN {step['to']} ON {step['condition']}")
-                            
         # Start building the query
         query_parts = []
         
         # For the REGULAR orders CTE
         if "orders" in tables:
             regular_fields = ["CAST(o.contact_id AS text) AS contact_id", 
-                             "o.order_id", "o.created_at", "o.bill_total_amount"]
+                            "o.order_id", "CAST(o.created_at AS timestamp) AS created_at", "o.bill_total_amount"]
             
             # Add contact info if available
-            if "contacts" in tables:
-                fields_to_check = {
-                    "contacts": ["first_name", "last_name", "email", "phone"],
-                    "contact_phones": ["phone_number"]
-                }
+            if has_contacts:
+                for field in ["first_name", "last_name", "email", "phone"]:
+                    if field in schema_info["tables"].get("contacts", {}):
+                        regular_fields.append(f"c.{field}")
                 
-                for table, fields in fields_to_check.items():
-                    if table in tables:
-                        table_info = schema_info["tables"][table]
-                        for field in fields:
-                            if field in table_info:
-                                regular_fields.append(f"{table}.{field}")
+                # Add phone number from contact_phones if available
+                if has_contact_phones and "phone_number" in schema_info["tables"].get("contact_phones", {}):
+                    regular_fields.append("cp.phone_number")
             
             regular_cte = f"""
             -- Regular orders with customer information
             WITH regular_orders AS (
                 SELECT {', '.join(regular_fields)}
                 FROM orders o
-                {' '.join(contact_joins)}
+                {" ".join(contact_joins_regular)}
+                {" ".join(phone_joins_regular)}
                 WHERE o.status = 'paid'
                 AND o.order_id NOT LIKE '%TEST%'
                 AND o.order_id NOT LIKE 'POD-WEBHOOK%'
+                AND (c.phone IS NULL OR c.phone NOT IN ('8850959517', '9999999999', '9876543210'))
+                AND (c.email IS NULL OR c.email NOT ILIKE '%test%')
             )"""
             query_parts.append(regular_cte)
         
         # For the AIRTABLE orders CTE
         if "airtable_orders" in tables:
-            airtable_fields = ["ao.contact_id", "ao.order_id", 
-                              "CAST(ao.created_at AS timestamp) AS created_at", 
-                              "ao.bill_total_amount"]
+            airtable_fields = ["CAST(ao.contact_id AS text) AS contact_id", "ao.order_id", 
+                            "CAST(ao.created_at AS timestamp) AS created_at", 
+                            "ao.bill_total_amount"]
             
             # Add contact info if available
-            if "airtable_contacts" in tables:
-                fields_to_check = {
-                    "airtable_contacts": ["first_name", "last_name", "email"],
-                    "airtable_contact_phones": ["phone_number"]
-                }
+            if has_airtable_contacts:
+                for field in ["first_name", "last_name", "email"]:
+                    if field in schema_info["tables"].get("airtable_contacts", {}):
+                        airtable_fields.append(f"ac.{field}")
                 
-                for table, fields in fields_to_check.items():
-                    if table in tables:
-                        table_info = schema_info["tables"][table]
-                        for field in fields:
-                            if field in table_info:
-                                airtable_fields.append(f"{table}.{field}")
+                # Add phone number from airtable_contact_phones if available
+                if has_airtable_contact_phones and "phone_number" in schema_info["tables"].get("airtable_contact_phones", {}):
+                    airtable_fields.append("acp.phone_number")
                                 
             airtable_cte = f"""
             -- Airtable orders with customer information
             {', ' if 'orders' in tables else ''}airtable_orders AS (
                 SELECT {', '.join(airtable_fields)}
                 FROM airtable_orders ao
-                {' '.join([join for join in contact_joins if 'airtable' in join])}
+                {" ".join(contact_joins_airtable)}
+                {" ".join(phone_joins_airtable)}
                 WHERE ao.status = 'paid'
                 AND ao.order_id NOT LIKE '%TEST%'
                 AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+                AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
             )"""
             query_parts.append(airtable_cte)
         
@@ -845,31 +924,104 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
             order_count_cte = order_count_cte.replace("combined_orders", "airtable_orders")
             query_parts.append(order_count_cte)
         
-        # Add the final SELECT statement
+        # Add the final SELECT statement with proper COALESCE for contact details
         if include_contact_details:
+            # Build fields list based on what's available in the schema
+            contact_fields = []
+            
+            # Add basic fields that are commonly available
+            contact_fields.extend([
+                "cu.contact_id",
+                "cu.order_count AS purchase_frequency",
+                "cu.total_spent",
+                "cu.latest_order_date",
+                "cu.first_order_date"
+            ])
+            
+            # Add name fields with COALESCE if available
+            if (has_contacts and "first_name" in schema_info["tables"].get("contacts", {})) or \
+               (has_airtable_contacts and "first_name" in schema_info["tables"].get("airtable_contacts", {})):
+                if has_contacts and has_airtable_contacts:
+                    contact_fields.append("COALESCE(c.first_name, ac.first_name) AS first_name")
+                elif has_contacts:
+                    contact_fields.append("c.first_name")
+                else:
+                    contact_fields.append("ac.first_name")
+                    
+            if (has_contacts and "last_name" in schema_info["tables"].get("contacts", {})) or \
+               (has_airtable_contacts and "last_name" in schema_info["tables"].get("airtable_contacts", {})):
+                if has_contacts and has_airtable_contacts:
+                    contact_fields.append("COALESCE(c.last_name, ac.last_name) AS last_name")
+                elif has_contacts:
+                    contact_fields.append("c.last_name")
+                else:
+                    contact_fields.append("ac.last_name")
+            
+            # Add email if available
+            if (has_contacts and "email" in schema_info["tables"].get("contacts", {})) or \
+               (has_airtable_contacts and "email" in schema_info["tables"].get("airtable_contacts", {})):
+                if has_contacts and has_airtable_contacts:
+                    contact_fields.append("COALESCE(c.email, ac.email) AS email")
+                elif has_contacts:
+                    contact_fields.append("c.email")
+                else:
+                    contact_fields.append("ac.email")
+            
+            # Add phone number if available (either from contacts table or contact_phones)
+            phone_fields = []
+            if has_contacts and "phone" in schema_info["tables"].get("contacts", {}):
+                phone_fields.append("c.phone")
+                
+            if has_contact_phones and "phone_number" in schema_info["tables"].get("contact_phones", {}):
+                phone_fields.append("cp.phone_number")
+                
+            if has_airtable_contact_phones and "phone_number" in schema_info["tables"].get("airtable_contact_phones", {}):
+                phone_fields.append("acp.phone_number")
+                
+            if phone_fields:
+                phone_coalesce = f"COALESCE({', '.join(phone_fields)}) AS phone_number"
+                contact_fields.append(phone_coalesce)
+            
+            # Determine which tables to join based on what's available
+            from_clause = ""
+            if "orders" in tables and "airtable_orders" in tables:
+                from_clause = "combined_orders co"
+            elif "orders" in tables:
+                from_clause = "regular_orders co"
+            else:
+                from_clause = "airtable_orders co"
+                
+            # Build GROUP BY clause based on selected fields
+            group_by_fields = ["cu.contact_id", "cu.order_count", "cu.total_spent", "cu.latest_order_date", "cu.first_order_date"]
+            
+            # Add contact fields to GROUP BY if they're in the SELECT
+            for field in ["first_name", "last_name", "email"]:
+                if f"c.{field}" in contact_fields or f"ac.{field}" in contact_fields or f"COALESCE(c.{field}, ac.{field})" in contact_fields:
+                    if has_contacts and has_airtable_contacts:
+                        group_by_fields.append(f"c.{field}")
+                        group_by_fields.append(f"ac.{field}")
+                    elif has_contacts:
+                        group_by_fields.append(f"c.{field}")
+                    else:
+                        group_by_fields.append(f"ac.{field}")
+            
+            # Add phone fields to GROUP BY if they're in the SELECT
+            for field in phone_fields:
+                group_by_fields.append(field)
+                
             final_select = f"""
             -- Final query with customer details
             SELECT
-                co.first_name,
-                co.last_name,
-                co.email,
-                {'co.phone_number,' if 'phone_number' in schema_info["tables"].get('contact_phones', {}) or 'phone_number' in schema_info["tables"].get('airtable_contact_phones', {}) else ''}
-                cu.order_count AS purchase_frequency,
-                cu.total_spent,
-                cu.latest_order_date,
-                cu.first_order_date
+                {', '.join(contact_fields)}
             FROM customer_orders cu
-            JOIN {'combined_orders' if 'orders' in tables and 'airtable_orders' in tables else ('regular_orders' if 'orders' in tables else 'airtable_orders')} co
+            LEFT JOIN {from_clause}
                 ON cu.contact_id = co.contact_id
+            {' '.join(contact_joins_regular) if has_contacts else ''}
+            {' '.join(contact_joins_airtable) if has_airtable_contacts else ''}
+            {' '.join(phone_joins_regular) if has_contact_phones else ''}
+            {' '.join(phone_joins_airtable) if has_airtable_contact_phones else ''}
             GROUP BY
-                co.first_name,
-                co.last_name,
-                co.email,
-                {'co.phone_number,' if 'phone_number' in schema_info["tables"].get('contact_phones', {}) or 'phone_number' in schema_info["tables"].get('airtable_contact_phones', {}) else ''}
-                cu.order_count,
-                cu.total_spent,
-                cu.latest_order_date,
-                cu.first_order_date
+                {', '.join(group_by_fields)}
             ORDER BY
                 cu.order_count DESC,
                 cu.total_spent DESC
@@ -894,6 +1046,9 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
         
         # Combine all parts into a single query
         full_query = "\n".join(query_parts)
+        
+        # Replace limit placeholder
+        full_query = full_query.replace("{limit}", str(limit))
         
         return full_query, None
 
@@ -921,17 +1076,23 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
                 if not rows:
                     return "No repeat customers found in the database."
                 
+                # Filter out test data
+                filtered_rows = []
+                for row in rows:
+                    if not self._is_test_user(row):
+                        filtered_rows.append(row)
+                
                 # Format the results
                 results = []
                 results.append("# Repeat Customers Analysis")
-                results.append(f"Found {len(rows)} repeat customers across regular and Airtable data sources.\n")
+                results.append(f"Found {len(filtered_rows)} non-test repeat customers across regular and Airtable data sources.\n")
                 
                 # Include a data volume report for context
                 results.append(self._generate_data_volume_report(schema_info))
                 
                 # Format customer details
                 results.append("## Customer Details")
-                for i, row in enumerate(rows, 1):
+                for i, row in enumerate(filtered_rows, 1):
                     # Create a nicely formatted customer card
                     customer_name = f"{row.get('first_name', '')} {row.get('last_name', '')}"
                     if not customer_name.strip():
@@ -945,6 +1106,8 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
                         results.append(f"- Email: {row['email']}")
                     if 'phone_number' in row and row['phone_number']:
                         results.append(f"- Phone: {row['phone_number']}")
+                    if 'contact_id' in row and row['contact_id']:
+                        results.append(f"- Contact ID: {row['contact_id']}")
                         
                     # Purchase history section
                     results.append("**Purchase History:**")
@@ -991,6 +1154,11 @@ Please try running individual SQL queries via the CockroachDBTool to identify sp
         except Exception as e:
             return f"""❌ Error processing repeat customers query: {str(e)}
             
+## Troubleshooting Information
+
+👇 Most likely a schema mismatch or bad JOIN condition.
+👉 Contact IDs may not align properly between CTEs or contact tables.
+
 ## Detailed SQL Query That Was Attempted:
 
 ```sql
@@ -1021,21 +1189,26 @@ This error might indicate schema mismatches or missing data in the tables. Pleas
                 cursor.execute("""
                 -- Common Table Expression (CTE) for regular orders with type casting for UUID compatibility
                 WITH regular_orders AS (
-                    SELECT CAST(contact_id AS text) AS contact_id, COUNT(*) as order_count
-                    FROM orders
-                    WHERE status = 'paid'
-                    AND order_id NOT LIKE '%TEST%'
-                    AND order_id NOT LIKE 'POD-WEBHOOK%'
-                    GROUP BY contact_id
+                    SELECT CAST(o.contact_id AS text) AS contact_id, COUNT(*) as order_count
+                    FROM orders o
+                    LEFT JOIN contacts c ON o.contact_id = c.id
+                    WHERE o.status = 'paid'
+                    AND o.order_id NOT LIKE '%TEST%'
+                    AND o.order_id NOT LIKE 'POD-WEBHOOK%'
+                    AND (c.phone IS NULL OR c.phone NOT IN ('8850959517', '9999999999', '9876543210'))
+                    AND (c.email IS NULL OR c.email NOT ILIKE '%test%')
+                    GROUP BY CAST(o.contact_id AS text)
                 ),
                 -- CTE for airtable orders
                 airtable_orders AS (
-                    SELECT contact_id, COUNT(*) as order_count
-                    FROM airtable_orders
-                    WHERE status = 'paid'
-                    AND order_id NOT LIKE '%TEST%'
-                    AND order_id NOT LIKE 'POD-WEBHOOK%'
-                    GROUP BY contact_id
+                    SELECT CAST(ao.contact_id AS text) AS contact_id, COUNT(*) as order_count
+                    FROM airtable_orders ao
+                    LEFT JOIN airtable_contacts ac ON ao.contact_id = ac.id
+                    WHERE ao.status = 'paid'
+                    AND ao.order_id NOT LIKE '%TEST%'
+                    AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+                    AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
+                    GROUP BY CAST(ao.contact_id AS text)
                 ),
                 -- Combined customers view
                 combined_customers AS (
@@ -1072,22 +1245,27 @@ This error might indicate schema mismatches or missing data in the tables. Pleas
                 -- Combine orders from both tables with type casting for UUID and timestamp compatibility
                 WITH combined_orders AS (
                     SELECT 
-                        CAST(contact_id AS text) AS contact_id, 
-                        CAST(created_at AS text) AS created_at,
-                        order_id
-                    FROM orders
-                    WHERE status = 'paid'
-                      AND order_id NOT LIKE '%TEST%'
-                      AND order_id NOT LIKE 'POD-WEBHOOK%'
+                        CAST(o.contact_id AS text) AS contact_id, 
+                        CAST(o.created_at AS timestamp) AS created_at,
+                        o.order_id
+                    FROM orders o
+                    LEFT JOIN contacts c ON o.contact_id = c.id
+                    WHERE o.status = 'paid'
+                      AND o.order_id NOT LIKE '%TEST%'
+                      AND o.order_id NOT LIKE 'POD-WEBHOOK%'
+                      AND (c.phone IS NULL OR c.phone NOT IN ('8850959517', '9999999999', '9876543210'))
+                      AND (c.email IS NULL OR c.email NOT ILIKE '%test%')
                     UNION ALL
                     SELECT 
-                        contact_id, 
-                        CAST(created_at AS text) AS created_at,
-                        order_id
-                    FROM airtable_orders
-                    WHERE status = 'paid'
-                      AND order_id NOT LIKE '%TEST%'
-                      AND order_id NOT LIKE 'POD-WEBHOOK%'
+                        CAST(ao.contact_id AS text) AS contact_id, 
+                        CAST(ao.created_at AS timestamp) AS created_at,
+                        ao.order_id
+                    FROM airtable_orders ao
+                    LEFT JOIN airtable_contacts ac ON ao.contact_id = ac.id
+                    WHERE ao.status = 'paid'
+                      AND ao.order_id NOT LIKE '%TEST%'
+                      AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+                      AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
                 ),
                 -- Rank orders by created_at for each customer
                 ranked_orders AS (
@@ -1096,12 +1274,11 @@ This error might indicate schema mismatches or missing data in the tables. Pleas
                     FROM combined_orders
                 )
                 -- Calculate average days between first and second order
-                -- Since we're now using string timestamps, we need to convert back to dates
                 SELECT 
                     AVG(
                         EXTRACT(
                             DAY FROM 
-                            (CAST(r2.created_at AS timestamp) - CAST(r1.created_at AS timestamp))
+                            (r2.created_at - r1.created_at)
                         )
                     ) as avg_days
                 FROM ranked_orders r1
@@ -1138,22 +1315,27 @@ This error might indicate schema mismatches or missing data in the tables. Pleas
                     -- Common Table Expression (CTE) for combined orders with casting
                     WITH combined_orders AS (
                         SELECT 
-                            CAST(contact_id AS text) AS contact_id,
-                            CAST(created_at AS timestamp) AS created_at,
-                            bill_total_amount
-                        FROM orders
-                        WHERE status = 'paid'
-                          AND order_id NOT LIKE '%TEST%'
-                          AND order_id NOT LIKE 'POD-WEBHOOK%'
+                            CAST(o.contact_id AS text) AS contact_id,
+                            CAST(o.created_at AS timestamp) AS created_at,
+                            o.bill_total_amount
+                        FROM orders o
+                        LEFT JOIN contacts c ON o.contact_id = c.id
+                        WHERE o.status = 'paid'
+                          AND o.order_id NOT LIKE '%TEST%'
+                          AND o.order_id NOT LIKE 'POD-WEBHOOK%'
+                          AND (c.phone IS NULL OR c.phone NOT IN ('8850959517', '9999999999', '9876543210'))
+                          AND (c.email IS NULL OR c.email NOT ILIKE '%test%')
                         UNION ALL
                         SELECT 
-                            contact_id,
-                            CAST(created_at AS timestamp) AS created_at,
-                            bill_total_amount
-                        FROM airtable_orders
-                        WHERE status = 'paid'
-                          AND order_id NOT LIKE '%TEST%'
-                          AND order_id NOT LIKE 'POD-WEBHOOK%'
+                            CAST(ao.contact_id AS text) AS contact_id,
+                            CAST(ao.created_at AS timestamp) AS created_at,
+                            ao.bill_total_amount
+                        FROM airtable_orders ao
+                        LEFT JOIN airtable_contacts ac ON ao.contact_id = ac.id
+                        WHERE ao.status = 'paid'
+                          AND ao.order_id NOT LIKE '%TEST%'
+                          AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+                          AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
                         ),
                     -- First purchase date for each customer
                     first_purchase AS (
@@ -1220,22 +1402,27 @@ This error might indicate schema mismatches or missing data in the tables. Pleas
                         cursor.execute("""
                         WITH combined_orders AS (
                             SELECT 
-                                CAST(contact_id AS text) AS contact_id,
-                                order_id,
+                                CAST(o.contact_id AS text) AS contact_id,
+                                o.order_id,
                                 'regular' AS source
-                            FROM orders
-                            WHERE status = 'paid'
-                              AND order_id NOT LIKE '%TEST%'
-                              AND order_id NOT LIKE 'POD-WEBHOOK%'
+                            FROM orders o
+                            LEFT JOIN contacts c ON o.contact_id = c.id
+                            WHERE o.status = 'paid'
+                              AND o.order_id NOT LIKE '%TEST%'
+                              AND o.order_id NOT LIKE 'POD-WEBHOOK%'
+                              AND (c.phone IS NULL OR c.phone NOT IN ('8850959517', '9999999999', '9876543210'))
+                              AND (c.email IS NULL OR c.email NOT ILIKE '%test%')
                             UNION ALL
                             SELECT 
-                                contact_id,
-                                order_id,
+                                CAST(ao.contact_id AS text) AS contact_id,
+                                ao.order_id,
                                 'airtable' AS source
-                            FROM airtable_orders
-                            WHERE status = 'paid'
-                              AND order_id NOT LIKE '%TEST%'
-                              AND order_id NOT LIKE 'POD-WEBHOOK%'
+                            FROM airtable_orders ao
+                            LEFT JOIN airtable_contacts ac ON ao.contact_id = ac.id
+                            WHERE ao.status = 'paid'
+                              AND ao.order_id NOT LIKE '%TEST%'
+                              AND ao.order_id NOT LIKE 'POD-WEBHOOK%'
+                              AND (ac.email IS NULL OR ac.email NOT ILIKE '%test%')
                         ),
                         combined_items AS (
                             SELECT 
@@ -1307,4 +1494,12 @@ This error might indicate schema mismatches or missing data in the tables. Pleas
             _retention_cache = formatted_result
             return formatted_result
         except Exception as e:
-            return f"❌ Error in general retention analysis: {str(e)}"
+            return f"""❌ Error in general retention analysis: {str(e)}
+
+## Troubleshooting Information
+- Error type: {type(e).__name__}
+- Error details: {str(e)}
+- This error occurred during the general retention analysis
+- It may be related to database schema or query execution issues
+
+Please check the database configuration and schema structure."""

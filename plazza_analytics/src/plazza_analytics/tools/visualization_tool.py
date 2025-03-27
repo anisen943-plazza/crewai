@@ -3,18 +3,19 @@
 import os
 from datetime import datetime
 from dotenv import load_dotenv
-from langchain.tools import BaseTool
+from crewai.tools import BaseTool
 from plazza_analytics.visualization_engine import CrewAIVisualization
 
 class VisualizationTool(BaseTool):
-    def run(self, *args, **kwargs):
-        return self._run(**kwargs)
-    name = "VisualizationTool"
-    description = (
+    name: str = "VisualizationTool"
+    description: str = (
         "Generate visualizations from markdown-based business analysis. "
         "Pass in the markdown result and this will return a markdown response "
         "with links to generated visuals (charts, dashboards)."
     )
+    
+    def run(self, *args, **kwargs):
+        return self._run(**kwargs)
 
     def _run(self, **kwargs) -> str:
         input_data = kwargs.get("input_data", "")

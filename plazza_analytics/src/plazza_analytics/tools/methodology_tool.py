@@ -3,12 +3,12 @@
 import os
 import psycopg2
 import psycopg2.extras
-from langchain.tools import BaseTool
+from crewai.tools import BaseTool
 from plazza_analytics.tools.config import DB_CONNECTION_VARS
 
 class MethodologyTool(BaseTool):
-    name = "MethodologyTool"
-    description = """Executes structured SQL queries with methodology tracking.
+    name: str = "MethodologyTool"
+    description: str = """Executes structured SQL queries with methodology tracking.
     Provides clean documentation of multi-source analysis and results."""
     
     def run(self, queries: list = []):

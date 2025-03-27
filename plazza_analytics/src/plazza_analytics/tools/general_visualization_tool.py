@@ -1,11 +1,11 @@
 # src/plazza_analytics/tools/general_visualization_tool.py
 
 import os
-from langchain.tools import BaseTool
+from crewai.tools import BaseTool
 
 class GeneralVisualizationTool(BaseTool):
-    name = "GeneralVisualizationTool"
-    description = """Generate business charts from markdown analysis.
+    name: str = "GeneralVisualizationTool"
+    description: str = """Generate business charts from markdown analysis.
 This tool parses an existing analysis (from Knowledge Base or analyst output)
 and generates multiple visualizations automatically.
 

@@ -3,12 +3,12 @@
 import os
 import psycopg2
 import psycopg2.extras
-from langchain.tools import BaseTool
+from crewai.tools import BaseTool
 from plazza_analytics.tools.config import DB_CONNECTION_VARS, DB_SCHEMA_CACHE
 
 class CockroachDBTool(BaseTool):
-    name = "CockroachDBTool"
-    description = """Execute SQL queries against any CockroachDB database in the Plazza ecosystem.
+    name: str = "CockroachDBTool"
+    description: str = """Execute SQL queries against any CockroachDB database in the Plazza ecosystem.
     Supports schema discovery, table exploration, and live query execution."""
     
     def run(self, query: str = "", database: str = "defaultdb"):
