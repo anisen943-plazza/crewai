@@ -351,3 +351,38 @@ If the database schema changes, the queries and extraction logic would need to b
 ⚠️ Could not analyze cohort performance: current transaction is aborted, commands ignored until end of transaction block
 
 *Analysis generated on 2025-03-28 06:27:58 using RetentionAnalysisTool with schema discovery.*
+
+---
+
+## Generated on 2025-03-28 07:57:29
+
+Repeat Customers Analysis:
+
+Orders Table:
+- Contact ID: None, Order Count: 7
+- Contact ID: 63be6990-4c7f-4754-a7cb-b1bcd092b385, Order Count: 22
+- Contact ID: d150b315-89b3-47f7-9bca-c3b89e168d8e, Order Count: 26
+
+No repeat customers found in Airtable orders that meet valid UUID criteria.
+
+---
+
+## Generated on 2025-03-28 07:58:14
+
+**Retention Analysis Insights**
+
+- **Total Repeat Customers:** 2 (from `orders`), 423 (from `airtable_orders`).
+- **Total Orders:** 57 (from `orders`), 2284 (from `airtable_orders`).
+
+### Actionable Insights:
+1. **Retention Rate`**: The retention rate appears low in the standard `orders` table whereas it's significantly higher for `airtable_orders`. This indicates that further investigation is required into why the `orders` table has such low repeat engagement. 
+2. **Cohort Analysis**: A deeper cohort analysis can help to identify customer behaviors over time, especially focusing on different segments based on the `orders` and `airtable_orders`.  
+3. **Discount Impact**: Consider reviewing the discount strategies applied in both tables to observe any correlation to the repeat purchases. 
+4. **Customer Engagement**: Implement strategies to engage the `orders` table's customers as initiatives for re-engagement could bring these numbers upwards.
+
+**Patterns Observed:**  - Customers using the Airtable platform are more inclined to return, suggesting more favorable conditions or experiences in that ecosystem.
+- Investigate why the overall return does not reflect in the `orders` table to understand potential barriers.
+
+**Potential Areas for Improvement:** Analyzing customer feedback specifically concerning the purchasing processes in the `orders` table could reveal significant insights to enhance return rates. 
+Updating the strategy for customer discounts or loyalty rewards in the standard system could also positively affect retention. 
+**Next Steps:** Conduct cohort analysis and further investigate customer feedback regarding `orders`.

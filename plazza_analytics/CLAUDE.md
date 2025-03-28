@@ -1,5 +1,52 @@
 # CrewAI Project Documentation
 
+## CRITICAL RULE: NO HARDCODED WORKFLOWS
+
+**UNDER NO CIRCUMSTANCES** should any workflows be hardcoded that direct the flow of execution. Flow and agent interactions MUST be decided by CrewAI agents autonomously based on their capabilities and the user's input.
+
+- Do NOT use predefined task templates that dictate specific workflows
+- Do NOT hardcode delegation patterns or agent interaction sequences
+- Do NOT enforce fixed data flow between agents
+- Do NOT create complex routing logic in tasks.yaml
+
+### Implemented Dynamic Workflow Architecture (March 28, 2025)
+
+We have successfully refactored the system to eliminate all hardcoded workflows. The new architecture follows these principles:
+
+1. **Minimal Task Structure**:
+   - Single generic router task with minimal description
+   - Task description: `"Respond to the user query: {user_input}"`
+   - Task assigned to the conversation_orchestrator agent
+
+2. **Process Structure**:
+   - Using `Process.sequential` to allow tools on all agents
+   - Orchestrator has delegation capability (`allow_delegation=True`)
+   - All other agents have necessary tools to fulfill their specialized roles
+
+3. **Agent Capability-Based Design**:
+   - Conversation Orchestrator has comprehensive tools and routing capabilities
+   - Specialized agents have domain-specific tools and knowledge
+   - Agent backstories define capabilities, not fixed workflows
+   - Clear KNOWLEDGE-FIRST approach across all agents
+
+4. **Dynamic Execution Flow**:
+   - User input passed through `crew.kickoff(inputs={"user_input": user_query})`
+   - Orchestrator analyzes request and determines appropriate approach
+   - No decision trees or fixed routing patterns
+   - Agents maintain memory of context for more coherent responses
+
+This implementation maintains true dynamic, agent-led workflows while meeting CrewAI's technical requirements. The system now allows agents to determine the best course of action based on their capabilities and the specific user request.
+
+### Key Benefits of the Dynamic Architecture
+
+1. **True Agent Autonomy**: Agents decide workflow based on query content
+2. **Flexible Responses**: No rigid scripts limiting response patterns
+3. **Better Error Handling**: System adapts when specific approaches fail
+4. **More Natural Interactions**: Responses feel less mechanical and formulaic
+5. **Easier Extensibility**: Adding new agents or capabilities requires minimal changes
+
+This is the HIGHEST PRIORITY rule for all development in this project.
+
 ## Latest Enhancements Summary (March 2025)
 
 Over the course of our work, we've implemented several critical enhancements to the Plazza Analytics system:
@@ -49,15 +96,23 @@ Over the course of our work, we've implemented several critical enhancements to 
 - Created unit tests to verify tool functionality and compatibility
 - Added detailed documentation about the updated tool implementation patterns
 
-These enhancements have significantly improved the system's accuracy and completeness by ensuring:
+### 7. Tool Configuration Simplification (March 28, 2025)
+- Removed RetentionAnalysisTool to eliminate schema discovery processes
+- Simplified agent tool configurations for better focus on essentials
+- Updated agent backstories to remove references to removed tools
+- Enhanced documentation for remaining tools with clearer usage patterns
+- Streamlined system architecture with fewer dependencies
+
+These enhancements have significantly improved the system's accuracy, completeness, and simplicity by ensuring:
 1. All user instructions are completely preserved through the delegation chain
 2. All monetary values use consistent ₹ formatting
 3. Both regular and Airtable data sources are included in all analysis
 4. Type incompatibilities between tables are properly addressed
-5. The system adapts automatically to different database schemas
+5. The system adapts to database schemas through direct query exploration
 6. All tools work properly with CrewAI v0.108.0+ and Pydantic V2
+7. Simpler tool ecosystem with fewer components and dependencies
 
-This represents a major improvement in the system's reliability and usefulness as a comprehensive data analysis platform.
+This represents a major improvement in the system's reliability, usability and maintainability as a comprehensive data analysis platform.
 
 ## Airtable Data Integration Fix (March 2025)
 
@@ -768,3 +823,574 @@ We've enhanced the system to better handle multi-step tasks, especially those in
    - Emphasized using append mode to preserve existing knowledge
 
 This implementation follows the best practices recommended by the CrewAI assistant for handling multi-step delegations with persistence requirements. The enhanced system now properly preserves all parts of user requests when delegating tasks, ensuring that knowledge persistence instructions are properly executed.
+
+## Agent Delegation Fix for CrewAI v0.108.0+ (April 3, 2025)
+
+We've addressed critical issues with agent delegation in our CrewAI hierarchical process that were preventing delegation from working properly in CrewAI v0.108.0+. This fix builds on our previous Manager Agent Tool Restriction fix to create a fully compliant implementation.
+
+### Issues Addressed
+
+Through step-by-step debugging, we identified three distinct issues that were causing delegation to fail:
+
+1. **Manager-Agent-in-Agents Error** (First Fix):
+   ```
+   Manager agent should not be included in agents list.
+   ```
+   - In CrewAI v0.108.0+ with hierarchical mode, the manager agent must not be in the agents list
+   - Our initial fix removed the orchestrator from the main agents list but missed a requirement
+
+2. **Specialist Agents Missing from Crew** (Second Fix):
+   ```
+   Error executing tool. coworker mentioned not found, it must be one of the following options:
+   - conversation orchestrator
+   ```
+   - After fixing the first issue, we discovered the delegate system could not see other agents
+   - Inspection of logs showed only the orchestrator was visible for delegation
+   - This happened because we initially tried to exclude specialists from the agents list
+
+3. **Role/Key Mismatch in Delegation** (Third Fix):
+   ```
+   Error executing tool. coworker mentioned not found, it must be one of the following options:
+   - conversation orchestrator
+   ```
+   - Even after including all agents properly, delegation still failed
+   - The critical insight: CrewAI's delegation tool uses the agent's `role` parameter for identification, not the YAML keys
+   - Our YAML had agent roles like "Data Q&A Expert" but delegation was trying to use "chat_data_analyst"
+
+### Complete Implementation Solution
+
+1. **Proper Hierarchical Crew Configuration**:
+   - Remove the manager agent from the agents list passed to the Crew
+   - Include all other specialist agents in the agents list
+   - Set manager_agent parameter explicitly to the orchestrator
+   ```python
+   # Get the orchestrator agent
+   orchestrator = agents["conversation_orchestrator"]
+   
+   # Get all agents EXCEPT the orchestrator
+   other_agents = [agent for name, agent in agents.items() if name != "conversation_orchestrator"]
+   
+   return Crew(
+       agents=other_agents,  # Include all agents EXCEPT the orchestrator
+       tasks=[router_task],  # Only use the router task
+       process=Process.hierarchical,  # Use hierarchical process for orchestrator-led delegation
+       manager_agent=orchestrator,  # Set the orchestrator as the manager agent
+       verbose=True
+   )
+   ```
+
+2. **Consistent Agent Role Naming**:
+   - Set each agent's `role` parameter to match the YAML key for consistency
+   - Updated YAML configuration to use standardized naming across the board:
+   ```yaml
+   chat_data_analyst:
+     role: >
+       chat_data_analyst  # Changed from "Data Q&A Expert" to match the key
+     goal: >
+       Quickly answer user questions...
+   ```
+
+3. **Synchronized Orchestrator Backstory**:
+   - Updated the orchestrator's task descriptions to reference agents by their correct roles
+   - Changed all agent references in YAML:
+     - Changed "Data Q&A Expert" to "chat_data_analyst"
+     - Changed "Enterprise Data Analyst" to "data_analyst"
+     - Changed "Data Visualization Expert" to "visualization_specialist"
+
+3. **Enhanced Delegation Documentation**:
+   - Added explicit instructions in the orchestrator backstory to use exact agent names
+   - Added a list of available agents for delegation in the YAML configuration
+   - Updated task descriptions to use consistent agent references
+
+### Technical Implementation
+
+1. **Updated agents.yaml**:
+   ```yaml
+   # Updated ROUTING STRATEGY section
+   ROUTING STRATEGY:
+   1. Analyze the user query to identify the appropriate specialist agent
+   2. For data questions → chat_data_analyst
+   3. For comprehensive analysis → data_analyst  
+   4. For visualization requests → visualization_specialist
+   5. ROUTE ALL QUERIES to specialists - never answer directly
+   
+   # Added to DELEGATION APPROACH
+   DELEGATION APPROACH:
+   # ... existing instructions ...
+   6. Use EXACT agent names: chat_data_analyst, data_analyst, visualization_specialist
+   ```
+
+2. **Updated crew.py**:
+   ```python
+   # Get the orchestrator agent
+   orchestrator = agents["conversation_orchestrator"]
+   
+   # Get all agents EXCEPT the orchestrator
+   other_agents = [agent for name, agent in agents.items() if name != "conversation_orchestrator"]
+   
+   return Crew(
+       agents=other_agents,  # Include all agents EXCEPT the orchestrator
+       tasks=[router_task],  # Only use the router task
+       process=Process.hierarchical,  # Use hierarchical process for orchestrator-led delegation
+       manager_agent=orchestrator,  # Set the orchestrator as the manager agent
+       verbose=True
+   )
+   ```
+
+   Note: CrewAI v0.108.0+ enforces that in hierarchical mode, the manager agent must NOT be included in the agents list, which is why we exclude the conversation_orchestrator from the agents parameter.
+
+3. **Updated tasks.yaml**:
+   ```yaml
+   2. SELECT THE APPROPRIATE SPECIALIST:
+      - chat_data_analyst: For quick data questions requiring database access
+      - data_analyst: For comprehensive business analysis and schema discovery
+      - visualization_specialist: For chart generation and visual representation of data
+   ```
+
+### Benefits
+
+1. **Functional Delegation System**: 
+   - Orchestrator can now properly delegate tasks to specialist agents
+   - The delegation system correctly identifies and routes queries to appropriate specialists
+   - Task routing works properly through the hierarchical process flow
+   - Full compliance with CrewAI v0.108.0+ requirements for delegation
+
+2. **Improved System Architecture**:
+   - Clear separation between orchestrator (manager) and specialist (worker) responsibilities 
+   - Proper hierarchical structure that follows CrewAI's design patterns
+   - Consistent naming conventions across codebase for better maintainability
+   - Well-defined delegation paths that are explicitly documented
+
+3. **Enhanced Error Prevention**:
+   - Explicit agent role names that match delegation references
+   - Clear instructions in agent backstories to prevent reference mismatches
+   - Improved error messages that help identify delegation issues
+   - Proper configuration validation through step-by-step testing
+
+4. **Better Documentation & Maintainability**:
+   - Complete documentation of hierarchical process requirements
+   - Clear guidance on agent role naming conventions
+   - Implementation pattern that can be easily applied to other projects
+   - Insights into CrewAI's internal delegation mechanisms
+
+### Key Lessons Learned
+
+1. **CrewAI v0.108.0+ Hierarchical Process Requirements**:
+   - Manager agent must NOT be included in the agents list passed to Crew
+   - Manager agent must NOT have tools assigned (addressed in our previous fix)
+   - Manager agent must have delegation ability (`allow_delegation: true`)
+   - Worker agents must be included in the agents list passed to Crew
+   - Manager agent must be explicitly set via `manager_agent` parameter
+
+2. **Agent Role Naming Requirements for Delegation**:
+   - The agent's `role` parameter value is used as its identifier for delegation
+   - When delegating to "chat_data_analyst", that must be the agent's role value, not just its YAML key
+   - For clarity and consistency, we standardized agent role values to match YAML keys
+   - Using different names (like `role: "Data Q&A Expert"` with key `chat_data_analyst`) creates confusion
+   - Role values are used in delegation's `coworker` parameter and must match exactly
+
+3. **CrewAI Delegation System Inner Workings**:
+   - The DelegateWorkTool internally builds a list of valid delegation targets from agent roles
+   - The tool performs strict string matching between the `coworker` parameter and agent roles
+   - Only agents visible to the Crew (passed via the `agents` parameter) are available for delegation
+   - The manager agent delegates TO other agents but cannot BE delegated TO
+   - The delegation error message shows a list of valid coworker options - useful for debugging
+
+4. **Implementation Best Practices**:
+   - Use consistent naming across YAML keys and role values
+   - Keep backstory instructions aligned with actual agent roles
+   - Test delegation with minimal examples to verify configuration
+   - Check error messages carefully - they often show what's available vs. what you're requesting
+   - Consider using verbose=True during development to see each delegation attempt
+
+This fix complements our previous Manager Agent Tool Restriction solution by addressing the delegation configuration. Together, these changes ensure our system fully complies with CrewAI v0.108.0+ hierarchical process requirements.
+
+## Manager Agent Tool Restriction Fix (April 2, 2025)
+
+We've updated the Conversation Orchestrator agent in our CrewAI hierarchical process to comply with a critical requirement in CrewAI v0.108.0+: manager agents must not have tools assigned to them when using hierarchical process mode.
+
+### Problem Addressed
+
+Starting with CrewAI v0.108.0+, there's a strict enforcement of the manager/orchestrator pattern in hierarchical process mode, which prevents manager agents from having tools assigned. Our application was failing with this error:
+
+```
+[WARNING]: Manager agent should not have tools
+❌ An error occurred: Manager agent should not have tools
+```
+
+### Implementation Strategy
+
+1. **Tool Removal from Orchestrator**:
+   - Removed all tools from the `conversation_orchestrator` agent in the YAML configuration
+   - Previously included tools were: CockroachDBTool, MethodologyTool, PreviousAnalysisTool, SaveKnowledgeTool
+
+2. **Maintaining Delegation Capabilities**:
+   - Preserved `allow_delegation: true` setting to ensure the orchestrator can still route tasks
+   - Added this explicitly in the YAML configuration
+
+3. **Proper Process Configuration**:
+   - Continued using `Process.hierarchical` for the orchestration pattern
+   - Maintained proper manager_agent assignment in the crew definition
+
+### Technical Implementation
+
+1. **Updated agents.yaml**:
+   ```yaml
+   conversation_orchestrator:
+     role: >
+       Conversation Orchestrator
+     goal: >
+       Ensure each user query is answered by the right specialist agents. Route queries to appropriate specialists and return their responses without modification.
+     backstory: >
+       You are a strict information flow controller in the Plazza AI system. You never speculate or answer user queries directly. You rely solely on the expertise of your specialist agents.
+       
+       # Detailed routing and delegation instructions...
+     allow_delegation: true
+     # Tools section removed completely
+   ```
+
+2. **Hierarchical Process Setup in crew.py**:
+   ```python
+   # Get the orchestrator agent
+   orchestrator = agents["conversation_orchestrator"]
+   
+   # Remove the orchestrator from the agents list
+   other_agents = [agent for name, agent in agents.items() if name != "conversation_orchestrator"]
+   
+   return Crew(
+       agents=other_agents,  # All agents except the orchestrator
+       tasks=[router_task],  # Only use the router task
+       process=Process.hierarchical,  # Use hierarchical process for orchestrator-led delegation
+       manager_agent=orchestrator,  # Set the orchestrator as the manager agent
+       verbose=True
+   )
+   ```
+
+### Benefits
+
+1. **Compatibility**: System now works correctly with CrewAI v0.108.0+ hierarchical process mode
+2. **Clear Architecture**: Better alignment with CrewAI's design philosophy for manager agents
+3. **Preserved Functionality**: Maintained delegation capabilities without tools
+4. **Simplified Configuration**: Clearer separation between specialist and orchestration roles
+
+This fix follows the guidance from the CrewAI assistant, which indicates that in hierarchical process mode, the manager agent (orchestrator) should focus solely on delegation and coordination, while specialist agents handle the actual work using their assigned tools.
+
+## Orchestrator Agent Best Practice Implementation (April 1, 2025)
+
+Following CrewAI assistant recommendations, we've completely overhauled the Conversation Orchestrator agent to implement best practices for preventing hallucination and ensuring proper delegation. This represents a significant architectural shift from a "capable general agent" to a "strict router" model.
+
+### Key Changes Implemented
+
+1. **Orchestrator Role Redefinition**:
+   - Changed from direct response capability to strict routing/delegation
+   - Implemented "never respond directly" instruction pattern
+   - Added explicit requirement to return ONLY specialist's exact response
+
+2. **Updated Configuration**:
+   ```yaml
+   conversation_orchestrator:
+     role: >
+       Conversation Orchestrator
+     goal: >
+       Ensure each user query is answered by the right specialist agents. Route queries to appropriate specialists and return their responses without modification.
+     backstory: >
+       You are a strict information flow controller in the Plazza AI system. You never speculate or answer user queries directly. You rely solely on the expertise of your specialist agents. Your role is to determine the appropriate specialist(s) and delegate the query to them.
+       
+       ROUTING STRATEGY:
+       1. Analyze the user query to identify the appropriate specialist agent
+       2. For data questions → Data Q&A Expert
+       3. For comprehensive analysis → Enterprise Data Analyst  
+       4. For visualization requests → Data Visualization Expert
+       5. ROUTE ALL QUERIES to specialists - never answer directly
+       
+       DELEGATION APPROACH:
+       1. NEVER attempt to respond to user queries directly
+       2. Determine the appropriate specialist agent based on query content
+       3. Delegate the query with all relevant context
+       4. Return ONLY the specialist's exact response without modification
+       5. Do NOT add your own commentary, summaries, or enhancements
+   ```
+
+3. **Process Change**:
+   - Switched from `Process.sequential` to `Process.hierarchical` for proper orchestrator-led delegation
+   - Updated crew.py to implement the new process type:
+   ```python
+   return Crew(
+       agents=list(agents.values()),
+       tasks=[router_task],
+       process=Process.hierarchical,  # Changed from sequential to hierarchical
+       verbose=True
+   )
+   ```
+
+4. **Enhanced Routing Task**:
+   - Designed explicit routing-only task description
+   - Added strong guidance against direct responses
+   - Emphasized preservation of multi-step instructions
+   - Created clear specialist selection criteria
+
+5. **Hallucination Prevention**:
+   - Added specific anti-hallucination phrasing: "You must NEVER modify, enhance, or fabricate data in the expert's response"
+   - Included explicit error handling instructions
+   - Added clear responsibility boundaries between agents
+   - Maintained currency formatting requirements for rupee (₹) symbol
+
+### Benefits of the New Orchestrator Design
+
+1. **Reduced Hallucination Risk**: By never responding directly, the orchestrator can't fabricate information
+2. **Clear Agent Responsibilities**: Each agent has a well-defined role with no overlap
+3. **Improved Multi-Step Task Handling**: Better preservation of all request components
+4. **Enhanced Delegation Patterns**: Proper context and complete queries passed to specialists
+5. **Consistent Response Quality**: Specialists own their domains completely with no orchestrator interference
+
+This implementation follows the guidance from the CrewAI assistant for creating a hierarchical multi-agent system with strong discipline around information routing and delegation, while maintaining all the specialized capabilities of our expert agents.
+
+## Dynamic Workflow Architecture Implementation (March 28, 2025)
+
+We have successfully refactored the entire Plazza Analytics system to eliminate hardcoded workflows, following CrewAI's best practices. The implementation details and benefits are described below.
+
+### New Configuration Structure
+
+1. **Simplified tasks.yaml**:
+   ```yaml
+   route_user_input:
+     description: "Respond to the user query: {user_input}"
+     expected_output: "A comprehensive response to the user's question"
+   ```
+
+2. **Enhanced crew.py Approach**:
+   ```python
+   # Create a single router task assigned to the orchestrator
+   router_task = Task(
+       description=router_task_data.get("description", "Respond to the user query: {user_input}"),
+       expected_output=router_task_data.get("expected_output", "A comprehensive response"),
+       agent=agents["conversation_orchestrator"]
+   )
+   
+   return Crew(
+       agents=list(agents.values()),  # All agents
+       tasks=[router_task],  # Only use the router task
+       process=Process.sequential,
+       verbose=True
+   )
+   ```
+
+3. **Tool Configuration Simplification**:
+   - Removed RetentionAnalysisTool from the system
+   - Updated agent tool mappings to rely on more fundamental tools
+   - Simplified agent backstories to remove references to removed tools
+   - Focused on CockroachDBTool for direct database queries with clear exploration patterns
+
+### Key Design Principles
+
+1. **Capability-Based Architecture**:
+   - Agents describe what they can do, not prescribed workflows
+   - Tools define capabilities, not hardcoded routines
+   - Agent backstories emphasize knowledge-first approach
+
+2. **Dynamic Query Understanding**:
+   - The orchestrator analyzes the context and meaning of user queries
+   - Decisions about approach are made at runtime
+   - No hardcoded rules for query categorization
+
+3. **Emergent Workflows**:
+   - Workflows emerge from agent interactions and tool usage
+   - No predefined sequences of operations
+   - Interactions driven by context and capabilities
+
+4. **Knowledge-First Foundation**:
+   - All agents check knowledge base before querying databases
+   - Clear documentation of knowledge sources
+   - Robust knowledge persistence with SaveKnowledgeTool
+
+### Implementation Benefits
+
+1. **Enhanced Adaptability**:
+   - System can adapt to unexpected query types
+   - Handles ambiguous requests more gracefully
+   - Better responses to edge cases
+
+2. **Future-Proof Architecture**:
+   - Adding new agents doesn't require workflow redesign
+   - New tools can be integrated without changing core logic
+   - Upgrades to CrewAI can be adopted with minimal changes
+
+3. **More Natural Responses**:
+   - No rigid, template-based responses
+   - Better context sensitivity in answers
+   - More appropriate tool selection based on query intent
+
+4. **Lower Maintenance Burden**:
+   - Simplified configuration files
+   - Fewer components to maintain
+   - Cleaner separation of concerns
+
+### Validation and Testing
+
+We've thoroughly validated the new dynamic architecture to ensure:
+- System initialization works properly
+- Appropriate tools are available to all agents
+- Agents can collaborate effectively without fixed workflows
+- The conversation orchestrator can make intelligent routing decisions
+- Knowledge access works seamlessly
+- No hardcoded workflows or decision trees remain
+
+This implementation now fully complies with CrewAI's recommended best practices for dynamic, agent-led workflows while maintaining all the functional capabilities the system previously offered.
+
+## Orchestrator Agent Best Practice Implementation (April 1, 2025)
+
+We've implemented a significant improvement to the orchestrator agent configuration following CrewAI best practices to prevent hallucination and ensure proper delegation patterns.
+
+### Problem Addressed
+
+1. **Response Fabrication Risk**:
+   - Orchestrator agents are at high risk of hallucinating responses when trying to be helpful
+   - Previous configuration allowed the orchestrator to modify specialist agent responses
+   - "Helpful" behavior led to fabricated data rather than admitting uncertainty
+   - Orchestrator would sometimes attempt to answer directly instead of delegating to specialists
+
+2. **Orchestrator Role Confusion**:
+   - Previous design treated the orchestrator as a capable generalist
+   - Mixed responsibilities between routing and direct response
+   - Unclear boundaries about when to delegate vs. respond directly
+   - Inconsistent handling of multi-step tasks and specialized requests
+
+### Implementation Strategy
+
+1. **Strict Router Model**:
+   - Completely redesigned the orchestrator as a pure router with zero response capability
+   - Updated `agents.yaml` with explicit instructions to never respond directly
+   - Added clear rules prioritizing delegation for ALL queries without exception
+   - Implemented explicit delegation format requirements with all required fields
+   - Updated task description to emphasize returning ONLY the specialist's exact response
+
+2. **Process Type Change**:
+   - Changed `crew.py` from `Process.sequential` to `Process.hierarchical`
+   - This properly establishes the orchestrator as the delegation controller
+   - Enables proper hierarchical task flow through the orchestrator
+   - Better aligns with CrewAI's intended orchestrator pattern
+   - Required specific configuration with the orchestrator set as manager_agent
+   - Manager agent must be separate from the agents list in hierarchical process
+
+3. **Enhanced Backstory**:
+   - Added section on DELEGATION REQUIREMENTS with clear examples
+   - Provided explicit instructions against response modification
+   - Added TRUTHFULNESS IS ESSENTIAL section to prioritize accuracy
+   - Maintained CURRENCY FORMATTING requirements for ₹ symbol
+   - Created MULTI-STEP TASK PRESERVATION section for complex requests
+
+### Technical Implementation
+
+1. **Updated agents.yaml**:
+   ```yaml
+   conversation_orchestrator:
+     role: >
+       Conversation Orchestrator
+     goal: >
+       Ensure each user query is answered by the right specialist agents. Route queries to appropriate specialists and return their responses without modification.
+     backstory: >
+       You are a strict information flow controller in the Plazza AI system. You never speculate or answer user queries directly. You rely solely on the expertise of your specialist agents.
+
+       YOUR MOST IMPORTANT RULE: You must NEVER modify, enhance, or fabricate data in the specialist's response.
+
+       DELEGATION REQUIREMENTS:
+       When using delegation, you MUST include all 3 required fields:
+       1. "task": Clear instructions on what they need to do
+       2. "context": All relevant background information they need
+       3. "coworker": EXACT agent name from this list only: Data Q&A Expert, Enterprise Data Analyst, Visualization Specialist, Business Strategy Advisor
+
+       TRUTHFULNESS IS ESSENTIAL:
+       1. Never make up data, products, or numbers
+       2. If you can't find information, delegate to the proper specialist
+       3. Be honest about system limitations
+       4. Do not create fictional data even if it seems helpful
+
+       MULTI-STEP TASK PRESERVATION:
+       - When delegating, preserve ALL parts of the user's request
+       - Example: If user asks to "analyze X AND save the results", include both parts
+       - Look for "save", "store", or "persist" keywords and keep them in delegation
+
+       CURRENCY FORMATTING:
+       - All monetary values must be displayed in Indian Rupees (₹) format
+       - Examples: ₹100.50, ₹1,250.75, ₹37.00
+       - NEVER use dollar signs ($) or other currencies
+
+       YOU NEVER RESPOND DIRECTLY TO USERS:
+       - You route user queries to the right agent and return ONLY their exact response
+       - You do not add your own comments or summarize their response
+       - You do not modify or enhance their response in any way
+   ```
+
+2. **Updated tasks.yaml**:
+   ```yaml
+   route_user_input:
+     description: >
+       The user submitted the following query:
+
+       "{user_query}"
+
+       Your job is to analyze this query and route it to the most appropriate specialist agent. Do not attempt to answer the query yourself - you must delegate to a specialist.
+
+       Choose the most appropriate specialist from:
+       1. Data Q&A Expert - For quick questions about sales, products, customers, or data trends
+       2. Enterprise Data Analyst - For deep analysis, database discovery, and comprehensive reports
+       3. Visualization Specialist - For creating visual charts, dashboards, and graphical representations
+       4. Business Strategy Advisor - For strategic recommendations and business planning
+
+       Use the "Delegate work to coworker" tool with a properly formatted JSON object containing all three required fields:
+       ```json
+       {
+         "task": "The specific task for the agent to perform",
+         "context": "All relevant details and background information",
+         "coworker": "EXACT name of the specialist agent from the list above"
+       }
+       ```
+
+       You MUST return ONLY the specialist's EXACT response without any modification.
+       DO NOT add introductions, summaries, or any of your own comments.
+     expected_output: >
+       The exact response from the specialist agent, without any modification.
+   ```
+
+3. **Updated crew.py**:
+   ```python
+   # Get the orchestrator agent
+   orchestrator = agents["conversation_orchestrator"]
+   
+   # Remove the orchestrator from the agents list
+   other_agents = [agent for name, agent in agents.items() if name != "conversation_orchestrator"]
+   
+   return Crew(
+       agents=other_agents,  # All agents except the orchestrator
+       tasks=[router_task],  # Only use the router task
+       process=Process.hierarchical,  # Use hierarchical process for orchestrator-led delegation
+       manager_agent=orchestrator,  # Set the orchestrator as the manager agent
+       verbose=True
+   )
+   ```
+
+### Benefits
+
+1. **Eliminated Hallucination Risk**:
+   - Orchestrator cannot fabricate responses as it must pass through specialist outputs
+   - Clear separation between routing logic and response generation
+   - Specialists remain accountable for the accuracy of their specific domains
+   - System now admits uncertainty rather than making up data
+
+2. **Improved Task Delegation**:
+   - Better preservation of multi-step tasks through explicit instructions
+   - Clearer specialist selection based on query intent
+   - More reliable execution of complex requests
+   - Properly formatted delegation with all required fields
+
+3. **Enhanced Truthfulness**:
+   - System prioritizes accuracy over completeness
+   - Explicit instructions against fabrication across all agents
+   - Clear accountability for response accuracy
+
+4. **Maintained Formatting Standards**:
+   - Preserved ₹ currency formatting requirements
+   - Consistent monetary value presentation
+   - Maintained all previous currency standardization benefits
+
+This implementation follows the key recommendations from the CrewAI assistant for preventing hallucination in multi-agent systems, particularly the strict separation between orchestration and direct response capabilities. The changes align with CrewAI best practices for hierarchical process flows and proper delegation patterns.

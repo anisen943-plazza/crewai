@@ -33,55 +33,15 @@ def create_plazza_crew():
                 # Fall back to old import path
                 from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
             
-            # Dynamically discover and use all knowledge files
-            print("Using CrewAI knowledge system with dynamic file discovery")
+            # Use simple filenames for CrewAI's knowledge system
+            # CrewAI will automatically look for these files in the "knowledge" directory
+            print("Using CrewAI knowledge system with simple filenames")
             
-            # Get all markdown files in the knowledge directory
-            knowledge_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'knowledge'))
-            knowledge_files = []
-            
-            try:
-                files = os.listdir(knowledge_dir)
-                for file in files:
-                    if file.endswith('.md') or file.endswith('.txt'):
-                        # Determine domain and type based on filename
-                        domain = "general"
-                        file_type = "knowledge"
-                        
-                        if "sales" in file or "order" in file:
-                            domain = "sales"
-                            file_type = "business_intelligence"
-                        elif "database" in file:
-                            domain = "technical"
-                            file_type = "database_schema"
-                        elif "customer" in file or "retention" in file:
-                            domain = "customer"
-                            file_type = "retention_analysis"
-                        elif "elastic" in file or "search" in file:
-                            domain = "technical"
-                            file_type = "search_operations"
-                        elif "sync" in file or "operation" in file:
-                            domain = "technical"
-                            file_type = "system_operations"
-                        elif "user" in file:
-                            domain = "customer"
-                            file_type = "user_preferences"
-                        
-                        knowledge_files.append({
-                            "file": file,
-                            "domain": domain,
-                            "type": file_type
-                        })
-                        
-                print(f"Found {len(knowledge_files)} knowledge files")
-            except Exception as e:
-                print(f"Error discovering knowledge files: {e}")
-                # Fallback to essential files if discovery fails
-                knowledge_files = [
-                    {"file": "sales_analysis.md", "domain": "sales", "type": "business_intelligence"},
-                    {"file": "database_schemas.md", "domain": "technical", "type": "database_schema"},
-                    {"file": "customer_insights.md", "domain": "customer", "type": "retention_analysis"}
-                ]
+            knowledge_files = [
+                {"file": "sales_analysis.md", "domain": "sales", "type": "business_intelligence"},
+                {"file": "database_schemas.md", "domain": "technical", "type": "database_schema"},
+                {"file": "customer_insights.md", "domain": "customer", "type": "retention_analysis"}
+            ]
             
             # Create sources with simple filenames (CrewAI will prepend "knowledge/")
             knowledge_sources = []
@@ -127,6 +87,7 @@ def create_plazza_crew():
     
     try:
         from plazza_analytics.tools.methodology_tool import MethodologyTool
+        from plazza_analytics.tools.retention_analysis_tool import RetentionAnalysisTool
         from plazza_analytics.tools.previous_analysis_tool import PreviousAnalysisTool
         from plazza_analytics.tools.general_visualization_tool import GeneralVisualizationTool
         from plazza_analytics.tools.save_knowledge_tool import SaveKnowledgeTool
@@ -135,6 +96,7 @@ def create_plazza_crew():
         # These names must exactly match the strings in the agents.yaml file
         cockroach_db_tool = CockroachDBTool()
         methodology_tool = MethodologyTool()
+        retention_analysis_tool = RetentionAnalysisTool()
         previous_analysis_tool = PreviousAnalysisTool()
         save_knowledge_tool = SaveKnowledgeTool()
         # Import the class and initialize it with a different name first to avoid name collision
@@ -148,6 +110,7 @@ def create_plazza_crew():
     tool_mapping = {
         "cockroach_db_tool": cockroach_db_tool,
         "methodology_tool": methodology_tool,
+        "retention_analysis_tool": retention_analysis_tool,
         "previous_analysis_tool": previous_analysis_tool,
         "save_knowledge_tool": save_knowledge_tool,
         "GeneralVisualizationTool": GeneralVisualizationTool
@@ -182,20 +145,14 @@ def create_plazza_crew():
     router_task = Task(
         description=router_task_data.get("description", "Respond to the user query: {user_query}"),
         expected_output=router_task_data.get("expected_output", "A comprehensive response"),
-        agent=agents["conversation_orchestrator"]  # Assign to the orchestrator agent
+        agent=agents["conversation_orchestrator"]  # Assign to orchestrator
     )
     
-    # Get the orchestrator agent
-    orchestrator = agents["conversation_orchestrator"]
-    
-    # Get all agents EXCEPT the orchestrator
-    other_agents = [agent for name, agent in agents.items() if name != "conversation_orchestrator"]
-    
+    # Define crew with hierarchical process for dynamic agent interactions
     return Crew(
-        agents=other_agents,  # Include all agents EXCEPT the orchestrator
+        agents=list(agents.values()),
         tasks=[router_task],  # Only use the router task
-        process=Process.hierarchical,  # Use hierarchical process for orchestrator-led delegation
-        manager_agent=orchestrator,  # Set the orchestrator as the manager agent
+        process=Process.hierarchical,  # Changed to hierarchical for dynamic delegation
         verbose=True
     )
 
