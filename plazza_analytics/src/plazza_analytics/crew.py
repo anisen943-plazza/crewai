@@ -15,44 +15,68 @@ def create_plazza_crew():
     task_config = load_yaml_config(tasks_yaml_path)
     
     # Set up knowledge sources with optimized parameters
+    # Check if we're using a newer version of CrewAI with Knowledge support
+    knowledge = None
     try:
-        # In newer versions of CrewAI, the Knowledge class is imported directly from crewai
-        from crewai import Knowledge
-        # The TextFileKnowledgeSource is still in a similar location
-        try:
-            # Try the new import path first
-            from crewai.knowledge_source.text_file_knowledge_source import TextFileKnowledgeSource
-        except ImportError:
-            # Fall back to old import path
-            from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+        # First verify if Knowledge class exists in this version of CrewAI
+        from importlib.util import find_spec
+        spec = find_spec('crewai.knowledge')
+        has_knowledge_module = spec is not None
         
-        # Create knowledge sources with optimal chunking parameters
-        # Use relative paths for CrewAI's knowledge system
-        knowledge_files = [
-            {"file": "sales_analysis.md", "domain": "sales", "type": "business_intelligence"},
-            {"file": "database_schemas.md", "domain": "technical", "type": "database_schema"},
-            {"file": "customer_insights.md", "domain": "customer", "type": "retention_analysis"}
-        ]
-        
-        # Create sources
-        knowledge_sources = []
-        for kf in knowledge_files:
+        if has_knowledge_module:
+            # Newer version with Knowledge support
+            from crewai import Knowledge
             try:
-                source = TextFileKnowledgeSource(
-                    file_paths=[kf["file"]],
-                    chunk_size=800,
-                    chunk_overlap=200,
-                    metadata={"domain": kf["domain"], "type": kf["type"]}
-                )
-                knowledge_sources.append(source)
-            except Exception as e:
-                print(f"Warning: Could not create knowledge source for {kf['file']}: {e}")
-        
-        # Create knowledge collection
-        knowledge = Knowledge(
-            collection_name="plazza_knowledge",
-            sources=knowledge_sources
-        ) if knowledge_sources else None
+                # Try the new import path first
+                from crewai.knowledge_source.text_file_knowledge_source import TextFileKnowledgeSource
+            except ImportError:
+                # Fall back to old import path
+                from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+            
+            # Create knowledge sources with absolute paths
+            BASE_KNOWLEDGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'knowledge'))
+            print(f"Using knowledge directory: {BASE_KNOWLEDGE_DIR}")
+            
+            knowledge_files = [
+                {"file": "sales_analysis.md", "domain": "sales", "type": "business_intelligence"},
+                {"file": "database_schemas.md", "domain": "technical", "type": "database_schema"},
+                {"file": "customer_insights.md", "domain": "customer", "type": "retention_analysis"}
+            ]
+            
+            # Create sources with absolute paths
+            knowledge_sources = []
+            for kf in knowledge_files:
+                file_path = os.path.join(BASE_KNOWLEDGE_DIR, kf["file"])
+                try:
+                    source = TextFileKnowledgeSource(
+                        file_paths=[file_path],
+                        chunk_size=800,
+                        chunk_overlap=200,
+                        metadata={"domain": kf["domain"], "type": kf["type"]}
+                    )
+                    knowledge_sources.append(source)
+                    print(f"Successfully created knowledge source for {file_path}")
+                except Exception as e:
+                    print(f"Warning: Could not create knowledge source for {file_path}: {e}")
+            
+            # Create knowledge collection
+            knowledge = Knowledge(
+                collection_name="plazza_knowledge",
+                sources=knowledge_sources
+            ) if knowledge_sources else None
+        else:
+            # This is an older version of CrewAI without Knowledge support
+            print("Using CrewAI v0.30.0 which doesn't support the Knowledge class.")
+            print("Knowledge base access will be handled through SaveKnowledgeTool and PreviousAnalysisTool instead.")
+            
+            # Check that knowledge files exist
+            knowledge_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'knowledge'))
+            if os.path.exists(knowledge_dir):
+                required_files = ["sales_analysis.md", "database_schemas.md", "customer_insights.md"]
+                existing_files = [f for f in required_files if os.path.exists(os.path.join(knowledge_dir, f))]
+                print(f"Found {len(existing_files)}/{len(required_files)} required knowledge files in {knowledge_dir}")
+            else:
+                print(f"Warning: Knowledge directory not found at {knowledge_dir}")
     
     except ImportError as e:
         print(f"Warning: Could not set up knowledge: {e}")

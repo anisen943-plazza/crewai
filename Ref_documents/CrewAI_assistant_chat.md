@@ -1444,3 +1444,118 @@ Would you like me to also help:
 	•	Add a test harness to validate the tool separately?
 
 Let me know!
+
+Thanks for the detailed breakdown! I went deep into CrewAI’s Crew class (v0.30.0) and its initialization process to answer your questions accurately. Let’s walk through your key questions one by one:
+
+⸻
+
+✅ 1. How does CrewAI resolve file paths in TextFileKnowledgeSource?
+
+CrewAI does not resolve relative file paths automatically relative to your crew.py. It assumes paths are either:
+	•	Absolute
+	•	Or relative to the working directory where the script is run
+
+In your case, since your working directory is likely /Users/aniruddhasen/Projects/crewai/, that’s why it’s failing to find knowledge/sales_analysis.md.
+
+⸻
+
+✅ 2. Is there a way to configure the base directory for knowledge files?
+
+There’s no built-in config option to define a “base knowledge directory” in CrewAI as of v0.30.0. You’ll need to explicitly manage file paths yourself before passing them into TextFileKnowledgeSource.
+
+⸻
+
+✅ 3. Can I specify absolute paths?
+
+Yes — and that’s the recommended fix. You can dynamically resolve absolute paths using Python like this:
+
+import os
+
+BASE_KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'knowledge')
+BASE_KNOWLEDGE_DIR = os.path.abspath(BASE_KNOWLEDGE_DIR)
+
+knowledge_files = [
+    {"file": "sales_analysis.md", "domain": "sales", "type": "business_intelligence"},
+    {"file": "database_schemas.md", "domain": "technical", "type": "database_schema"},
+    {"file": "customer_insights.md", "domain": "customer", "type": "retention_analysis"}
+]
+
+knowledge_sources = []
+for kf in knowledge_files:
+    file_path = os.path.join(BASE_KNOWLEDGE_DIR, kf["file"])
+    try:
+        source = TextFileKnowledgeSource(
+            file_paths=[file_path],
+            chunk_size=800,
+            chunk_overlap=200,
+            metadata={"domain": kf["domain"], "type": kf["type"]}
+        )
+        knowledge_sources.append(source)
+    except Exception as e:
+        print(f"Warning: Could not load knowledge source: {e}")
+
+
+
+⸻
+
+✅ 4. Recommended structure for consistent file paths?
+
+Best practice:
+	•	Always resolve paths relative to the current script (__file__) and normalize to absolute.
+	•	Avoid relying on working directory assumptions (they break across tools, CLI calls, IDEs, etc.).
+
+⸻
+
+✅ 5. Would a symlink from /crewai/knowledge to /plazza_analytics/knowledge help?
+
+Yes, a symlink would work as a workaround, especially for quick CLI usage or testing:
+
+ln -s plazza_analytics/knowledge knowledge
+
+But it’s not portable or clean — better to resolve paths in Python as shown above.
+
+⸻
+
+✅ 6. Can I set an environment variable or config to control this?
+
+No current CrewAI support for an env-var-based knowledge root directory. You’d have to implement this logic yourself, e.g.:
+
+os.environ.get("KNOWLEDGE_PATH", default_path)
+
+And plug that into your file_paths.
+
+⸻
+
+✅ Summary: How to fix your issue
+
+Replace your knowledge source block with this:
+
+import os
+
+BASE_KNOWLEDGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'knowledge'))
+
+knowledge_files = [
+    {"file": "sales_analysis.md", "domain": "sales", "type": "business_intelligence"},
+    {"file": "database_schemas.md", "domain": "technical", "type": "database_schema"},
+    {"file": "customer_insights.md", "domain": "customer", "type": "retention_analysis"}
+]
+
+knowledge_sources = []
+for kf in knowledge_files:
+    file_path = os.path.join(BASE_KNOWLEDGE_DIR, kf["file"])
+    try:
+        source = TextFileKnowledgeSource(
+            file_paths=[file_path],
+            chunk_size=800,
+            chunk_overlap=200,
+            metadata={"domain": kf["domain"], "type": kf["type"]}
+        )
+        knowledge_sources.append(source)
+    except Exception as e:
+        print(f"Warning: Could not create knowledge source for {kf['file']}: {e}")
+
+This is portable, stable, and aligns with how CrewAI expects file paths.
+
+⸻
+
+If you’d like, I can wrap this logic into a reusable helper module (e.g., load_knowledge_sources.py). Just say the word!

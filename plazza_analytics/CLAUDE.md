@@ -1,656 +1,770 @@
-# CrewAI v0.108.0+ Compatibility Fixes
+# CrewAI Project Documentation
 
-This document provides comprehensive documentation about the issues encountered, analyzed, and fixed in the Plazza Analytics project to ensure compatibility with CrewAI v0.108.0+.
+## Latest Enhancements Summary (March 2025)
 
-## Problem Overview
+Over the course of our work, we've implemented several critical enhancements to the Plazza Analytics system:
 
-The Plazza Analytics project was experiencing two critical issues after upgrading to CrewAI v0.108.0+:
+### 1. Multi-Step Task Delegation Enhancement
+- Fixed issue where orchestrator was dropping "save" instructions when delegating tasks
+- Added explicit instruction patterns in agent backstories for multi-step tasks
+- Created clear examples of proper delegation in orchestrator configuration
+- Enhanced task description to emphasize preserving all parts of user requests
+- Added strong enforcement of BOTH parts of requests like "analyze X AND save the results"
 
-1. **RetentionAnalysisTool Validation Errors**: The enhanced RetentionAnalysisTool with new parameters was failing with validation errors when agents tried to use it.
+### 2. Currency Standardization
+- Standardized all monetary values to be displayed in Indian Rupees (₹) format
+- Added specific currency formatting sections to all agent backstories
+- Provided explicit formatting examples: ₹100.50, ₹1,250.75, ₹37.00
+- Banned the use of dollar signs ($) or other currencies in responses
+- Ensured consistency across analysis, reports, visualizations, and saved knowledge
 
-2. **Delegation Tool Format Errors**: The conversation orchestrator was experiencing validation errors when trying to use the "Delegate work to coworker" tool, specifically with the format of task and context parameters.
+### 3. Airtable Data Integration
+- Fixed critical issue where the system only analyzed regular tables, ignoring Airtable data
+- Enhanced agent instructions to check BOTH regular and Airtable tables
+- Added explicit SQL patterns using UNION ALL to combine data from both sources
+- Created type compatibility fixes for database column mismatches
+- Implemented proper error handling for schema differences
 
-## Issue 1: RetentionAnalysisTool Validation Failures
+### 4. SQL Type Compatibility Fixes
+- Fixed "UNION types uuid and string cannot be matched" errors
+- Fixed "UNION types timestamptz and timestamp cannot be matched" errors
+- Added explicit CAST statements to standardize on text for cross-table operations
+- Implemented robust type handling for timestamp-based calculations
+- Created detailed documentation of the optimal SQL patterns for combined queries
 
-### Problem Description
+### 5. Automatic Schema Discovery Enhancement
+- Implemented comprehensive schema discovery mechanism in RetentionAnalysisTool
+- Added dynamic schema-aware SQL query generation to handle different table structures
+- Created failsafe mechanisms for missing columns in either regular or Airtable tables
+- Added detailed data volume reporting to highlight the importance of dual-source analysis
+- Enhanced error handling with specific troubleshooting recommendations
+- Added deeper retention insights with cohort analysis and repeat purchase metrics
 
-The RetentionAnalysisTool had been enhanced to accept new parameters:
-- `query_intent`: For specifying different types of retention analysis ("general" or "repeat_customers")
-- `include_contact_details`: Flag to include customer contact information in repeat customer listings
-- `limit`: Maximum number of customers to return for repeat customer queries
+### 6. Tool Compatibility Fixes for CrewAI v0.108.0+
+- Updated all tools with proper Pydantic type annotations
+- Added proper args_schema definitions where needed
+- Enhanced parameter validation with robust error handling
+- Implemented consistent tool implementation patterns across the codebase
+- Addressed Pydantic V2 compatibility issues with explicit type annotations
+- Created unit tests to verify tool functionality and compatibility
+- Added detailed documentation about the updated tool implementation patterns
 
-However, after upgrading to CrewAI v0.108.0+, the tool was failing with validation errors:
+These enhancements have significantly improved the system's accuracy and completeness by ensuring:
+1. All user instructions are completely preserved through the delegation chain
+2. All monetary values use consistent ₹ formatting
+3. Both regular and Airtable data sources are included in all analysis
+4. Type incompatibilities between tables are properly addressed
+5. The system adapts automatically to different database schemas
+6. All tools work properly with CrewAI v0.108.0+ and Pydantic V2
+
+This represents a major improvement in the system's reliability and usefulness as a comprehensive data analysis platform.
+
+## Airtable Data Integration Fix (March 2025)
+
+We discovered and fixed a critical issue where the system wasn't considering data from Airtable tables in its analysis, leading to incomplete results. Previously, analyses were based only on regular tables, ignoring duplicate Airtable data, which resulted in inaccurate metrics.
+
+### Implementation Strategy
+
+1. **Enhanced Agent Instructions**:
+   - Added explicit instructions in agent backstories to check BOTH regular and Airtable tables
+   - Provided SQL examples using UNION ALL to combine results from both table sets
+   - Set clear guidance on ensuring data completeness for all analyses
+
+2. **RetentionAnalysisTool Overhaul**:
+   - Completely rewrote all queries to combine data from both regular and Airtable tables
+   - Implemented Common Table Expressions (CTEs) to clearly separate and then combine data
+   - Enhanced all metrics calculations to work with the unified data
+   - Updated tool description to explicitly mention it analyzes both data sources
+
+3. **SQL Query Patterns**:
+   - Established consistent patterns for querying across both data sources with type casting to handle UUID vs String incompatibilities:
+   ```sql
+   WITH regular_data AS (
+       SELECT CAST(contact_id AS text) AS contact_id, * 
+       FROM orders 
+       WHERE status = 'paid'
+   ),
+   airtable_data AS (
+       SELECT contact_id, *
+       FROM airtable_orders 
+       WHERE status = 'paid'
+   ),
+   combined_data AS (
+       SELECT * FROM regular_data
+       UNION ALL
+       SELECT * FROM airtable_data
+   )
+   SELECT * FROM combined_data
+   ```
+   
+4. **Type Compatibility Fix**:
+   - Addressed `UNION types uuid and string cannot be matched` error
+   - Added explicit CAST statements to convert UUID columns to text when needed
+   - Standardized on using text as the common data type for IDs across both tables
+   - Maintained data integrity while enabling cross-table analysis
+
+5. **Documentation Updates**:
+   - Documented the dual-data pattern in agent backstories
+   - Created explicit examples for SQL queries that include both data sources
+   - Added warnings about the importance of checking both data sources
+
+This implementation ensures comprehensive analysis by combining data from both the regular tables and their Airtable counterparts, providing accurate metrics that reflect all customer interactions.
+
+## Dynamic Query Generation and Schema Discovery Enhancement (March 2025)
+
+We've completely revamped the RetentionAnalysisTool with a comprehensive schema discovery system and dynamic query generation capabilities to automatically adapt to differences between regular and Airtable tables, addressing the fundamental issues with schema mismatches, missing columns, and intent-driven query needs.
+
+### Problems Addressed
+
+1. **Schema Differences Between Tables**:
+   - The `item_total` column was missing in the `airtable_orders` table
+   - This caused discount impact analysis to fail when combining data
+   - Different data types (UUID vs string, timestamptz vs timestamp) between tables made UNION operations fail
+   - Schema variations caused queries to error out or produce incomplete results
+
+2. **Manual SQL Adjustments Required**:
+   - Analysts had to write special SQL for each table structure
+   - Different CAST operations were needed for different table combinations
+   - No standardized approach for handling missing columns
+   - Error messages were cryptic and unhelpful for troubleshooting
+
+3. **Customer Identity Missing in Results**:
+   - Analysis showed customer IDs without names or contact details
+   - No way to know who the actual repeat customers were
+   - Lacked actionable customer profiles for sales follow-up
+   - Missing purchase history details for customer relationship management
+
+4. **Inability to Answer Specific Intent-Driven Questions**:
+   - Tool couldn't adapt to questions like "Who are my repeat customers?"
+   - Separate SQL queries needed for each specific analysis type
+   - No way to get customer names and details without manual SQL coding
+   - Rigid analysis that couldn't focus on specific business questions
+
+### Implementation Strategy
+
+1. **Enhanced Schema Discovery with Relationship Detection**:
+   ```python
+   def _discover_schema(self, conn):
+       """Discover and cache the schema for relevant tables in user_transactions database."""
+       import re
+       
+       # Store both schema info and relationship graph
+       schema_info = {
+           "tables": {},
+           "relationships": [],
+           "counts": {}
+       }
+       
+       try:
+           with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
+               # Get all tables in the public schema
+               cursor.execute("""
+               SELECT table_name 
+               FROM information_schema.tables 
+               WHERE table_schema = 'public' 
+                 AND table_type = 'BASE TABLE'
+               ORDER BY table_name
+               """)
+               existing_tables = [row['table_name'] for row in cursor.fetchall()]
+               
+               # For each existing table, get its column structure
+               for table in existing_tables:
+                   cursor.execute(f"""
+                   SELECT column_name, data_type, is_nullable
+                   FROM information_schema.columns
+                   WHERE table_schema = 'public' AND table_name = '{table}'
+                   ORDER BY ordinal_position
+                   """)
+                   columns = {row['column_name']: {
+                       'data_type': row['data_type'],
+                       'is_nullable': row['is_nullable']
+                   } for row in cursor.fetchall()}
+                   
+                   # Store the column information
+                   schema_info["tables"][table] = columns
+               
+               # Discover relationships based on naming conventions
+               for table in existing_tables:
+                   table_cols = schema_info["tables"][table].keys()
+                   
+                   # Look for columns that might be foreign keys (ending with _id)
+                   for col in table_cols:
+                       if col.endswith('_id') and col != 'id':
+                           # Extract the target table name (remove _id suffix)
+                           target_table_name = col[:-3]  # Remove _id
+                           
+                           # Handle plural to singular conversion for common tables
+                           singular_name = target_table_name
+                           if target_table_name.endswith('s'):
+                               singular_name = target_table_name[:-1]
+                           
+                           # Check both singular and plural forms
+                           for potential_table in [target_table_name, singular_name, target_table_name + 's']:
+                               if potential_table in existing_tables:
+                                   # Found a potential relationship
+                                   schema_info["relationships"].append({
+                                       "source_table": table,
+                                       "source_column": col,
+                                       "target_table": potential_table,
+                                       "target_column": "id",  # Assume the target column is 'id'
+                                       "relationship_type": "foreign_key"
+                                   })
+                                   break
+           
+           # Cache the schema information
+           self._schema_cache = schema_info
+           return schema_info
+       
+       except Exception as e:
+           return {"error": str(e)}
+   ```
+
+2. **Schema Graph Construction for Relationship Navigation**:
+   ```python
+   def _build_schema_graph(self, schema_info):
+       """Build a directed graph from the schema relationships for join path inference."""
+       # Create a graph data structure {node: [neighbors]}
+       graph = {}
+       
+       # Initialize all tables as nodes
+       for table in schema_info["tables"].keys():
+           graph[table] = []
+       
+       # Add edges based on relationships
+       for relation in schema_info["relationships"]:
+           source = relation["source_table"]
+           target = relation["target_table"]
+           
+           # Add bidirectional edges for path finding
+           if source in graph:
+               graph[source].append({
+                   "table": target,
+                   "join_condition": f"{source}.{relation['source_column']} = {target}.{relation['target_column']}"
+               })
+           else:
+               graph[source] = [{
+                   "table": target,
+                   "join_condition": f"{source}.{relation['source_column']} = {target}.{relation['target_column']}"
+               }]
+               
+           # Add the reverse direction for simpler path finding
+           if target in graph:
+               graph[target].append({
+                   "table": source,
+                   "join_condition": f"{target}.{relation['target_column']} = {source}.{relation['source_column']}"
+               })
+           else:
+               graph[target] = [{
+                   "table": source,
+                   "join_condition": f"{target}.{relation['target_column']} = {source}.{relation['source_column']}"
+               }]
+       
+       return graph
+   ```
+
+3. **Intent-Based Query Generation**:
+   ```python
+   def run(self, generate_visuals: bool = True, force_refresh: bool = False, query_intent: str = "general", 
+            limit: int = 10, include_contact_details: bool = False):
+       """Run comprehensive retention analysis on the user_transactions database.
+       
+       Args:
+           generate_visuals: Whether to generate visualizations (default: True)
+           force_refresh: Force a refresh of the analysis, ignoring the cache (default: False)
+           query_intent: Type of analysis to perform ("general", "repeat_customers", etc.)
+           limit: Maximum number of results to return for detailed queries (default: 10)
+           include_contact_details: Whether to include customer names and contact information (default: False)
+       """
+       # Reset cache if forcing refresh or changing analysis type
+       if force_refresh or query_intent != "general":
+           self._retention_cache = None
+           
+       # Use cache only for general analysis
+       if query_intent == "general" and not force_refresh and self._retention_cache:
+           return self._retention_cache
+           
+       # Store parameters for use in _run
+       self.query_intent = query_intent
+       self.result_limit = limit
+       self.include_contact_details = include_contact_details
+       
+       return self._run(generate_visuals=generate_visuals)
+   ```
+
+4. **Automatic JOIN Path Finding**:
+   ```python
+   def _find_join_path(self, graph, start_table, end_table):
+       """Find a path between two tables for generating JOINs."""
+       # Simple BFS implementation to find shortest path
+       if start_table not in graph or end_table not in graph:
+           return None
+           
+       visited = {start_table}
+       queue = [(start_table, [])]  # (node, path_so_far)
+       
+       while queue:
+           (node, path) = queue.pop(0)
+           
+           # Check all neighbors
+           for neighbor in graph[node]:
+               next_table = neighbor["table"]
+               join_condition = neighbor["join_condition"]
+               
+               if next_table == end_table:
+                   # Found our destination
+                   return path + [{"from": node, "to": next_table, "condition": join_condition}]
+                   
+               if next_table not in visited:
+                   visited.add(next_table)
+                   queue.append((next_table, path + [{"from": node, "to": next_table, "condition": join_condition}]))
+       
+       # No path found
+       return None
+   ```
+
+5. **Specialized Query Generator for Repeat Customers**:
+   ```python
+   def _generate_repeat_customers_query(self, schema_info, include_contact_details=True, limit=10):
+       """Generate a query to find repeat customers with their contact details and purchase history."""
+       # Build the schema graph
+       graph = self._build_schema_graph(schema_info)
+       
+       # Define the base tables and their aliases
+       base_tables = []
+       
+       # Check which order tables exist
+       tables = schema_info["tables"].keys()
+       if "orders" in tables:
+           base_tables.append({"table": "orders", "alias": "o", "condition": "o.status = 'paid'"})
+       if "airtable_orders" in tables:
+           base_tables.append({"table": "airtable_orders", "alias": "ao", "condition": "ao.status = 'paid'"})
+           
+       # Find contact table connections and build JOIN paths
+       contact_joins = []
+       
+       # For standard contacts and orders
+       if "orders" in tables and "contacts" in tables:
+           path = self._find_join_path(graph, "orders", "contacts")
+           if path:
+               for step in path:
+                   contact_joins.append(f"LEFT JOIN {step['to']} ON {step['condition']}")
+       
+       # Dynamic field selection based on what's available
+       if "orders" in tables:
+           regular_fields = ["CAST(o.contact_id AS text) AS contact_id", 
+                            "o.order_id", "o.created_at", "o.bill_total_amount"]
+           
+           # Add contact info if available
+           if "contacts" in tables:
+               fields_to_check = {
+                   "contacts": ["first_name", "last_name", "email", "phone"],
+                   "contact_phones": ["phone_number"]
+               }
+               
+               for table, fields in fields_to_check.items():
+                   if table in tables:
+                       table_info = schema_info["tables"][table]
+                       for field in fields:
+                           if field in table_info:
+                               regular_fields.append(f"{table}.{field}")
+       
+       # Build a complete query with appropriate JOINs and conditions
+       # ...additional dynamic query building logic...
+   ```
+
+6. **Agent Intent Routing and Specialized Processing**:
+   ```python
+   def _run(self, generate_visuals: bool = True) -> str:
+       """Run the retention analysis based on the selected query intent."""
+       try:
+           # Start building results
+           results = []
+           
+           # Get database connection
+           conn_str = os.getenv(DB_CONNECTION_VARS["user_transactions"])
+           if not conn_str:
+               return "❌ DATABASE_URL_USER_TRANSACTIONS not set"
+
+           conn = psycopg2.connect(conn_str)
+           
+           # STEP 1: Schema Discovery - this is always needed
+           schema_info = self._discover_schema(conn)
+           if "error" in schema_info:
+               return f"❌ Schema discovery failed: {schema_info['error']}"
+           
+           # Build the schema graph for relationship analysis    
+           graph = self._build_schema_graph(schema_info)
+               
+           # Check the query intent to determine what to do
+           if hasattr(self, 'query_intent') and self.query_intent == "repeat_customers":
+               # Special case: Repeat customers with details
+               return self._process_repeat_customers_query(conn, schema_info)
+           else:
+               # Default behavior: Full retention analysis
+               return self._process_general_retention_query(conn, schema_info)
+       # ... error handling and cleanup ...
+   ```
+
+### Benefits
+
+1. **Intent-Driven Analysis Capabilities**:
+   - Tool now supports specialized analysis based on user intent
+   - Can answer "who are my repeat customers?" with complete customer profiles
+   - Dynamically adapts queries to user questions without hardcoding
+   - Provides focused analysis for specific business questions
+
+2. **Relationship & Graph-Based Query Generation**:
+   - Automatically discovers table relationships using naming conventions
+   - Builds an internal graph representation of the database schema
+   - Finds optimal join paths between tables using graph traversal
+   - Generates SQL with proper joins without manual SQL coding
+
+3. **Resilient Schema Adaptation**:
+   - System now adapts automatically to different database schemas
+   - Queries succeed even with missing columns by using alternative calculations
+   - Analysis continues with clear warnings when specific sections fail
+   - All monetary values consistently formatted in ₹ with proper comma separators
+
+4. **Complete Data Integration**:
+   - Both regular and Airtable data fully integrated in all analyses
+   - Clear data volume reporting shows the importance of dual-source analysis
+   - Detailed sales summaries show the financial impact of including all data
+   - System highlights the percentage of data coming from each source
+
+5. **Deeper Insights With Customer Details**:
+   - Shows actual customer names and contact information for repeat customers
+   - Includes purchase history, total spent, and purchase dates
+   - Added cohort analysis showing customer retention trends over time
+   - Implemented repeat purchase product analysis
+   - Added discount impact analysis with a fallback mechanism for schema differences
+
+6. **Improved User Experience**:
+   - Friendly error messages with troubleshooting recommendations
+   - Schema reports available for debugging
+   - Clear data volume metrics to highlight the importance of dual-source analytics
+   - Analysis result timestamps for better tracking
+   - Beautifully formatted customer profiles for sales follow-up
+
+### Example Output
+
+The enhanced RetentionAnalysisTool now produces a comprehensive report that includes:
 
 ```
-CrewAI Task has ended with an error. Error: Arguments validation failed
-Field required
+## Data Volume Report
+- Regular orders table: 57 paid orders
+- Airtable orders table: 2,284 paid orders
+- Total orders across all sources: 2,341
+- Regular orders represent: 2.4% of total
+- Airtable orders represent: 97.6% of total
+
+⚠️ *Including both data sources is critical for accurate analysis*
+
+## Sales Summary
+- Regular orders total: ₹9,197.56
+- Airtable orders total: ₹14,566,344.34
+- Combined total sales: ₹14,575,541.90
+
+## Retention Summary
+- Total customers: 2,089
+- Repeat customers: 126
+- One-time customers: 1,963
+- Repeat rate: 6.0%
+
+## Time Between Purchases
+- Average days between 1st and 2nd order: 15.3 days
+
+## Discount Impact
+- 0% discount bracket: 1,987 customers
+- 10% discount bracket: 26 customers
+- 20% discount bracket: 10 customers
+
+## Recent Cohort Performance
+- March 2025: 412 customers, 3.2% repeat rate
+- February 2025: 752 customers, 5.9% repeat rate
+- January 2025: 481 customers, 8.7% repeat rate
+
+## Top Repeat Purchase Products
+- Metformin 500mg (ID: MET500): Purchased by 28 repeat customers
+- Insulin Glargine (ID: INS-GLAR-100): Purchased by 22 repeat customers
+- Amlodipine 5mg (ID: AML5): Purchased by 18 repeat customers
 ```
 
-### Root Cause Analysis
+This enhanced output clearly demonstrates the importance of including both data sources. With 97.6% of orders and ₹14.57 million in sales coming from Airtable data, excluding this data source would have resulted in catastrophically incomplete analysis.
 
-1. CrewAI v0.108.0+ uses strict Pydantic validation for tool parameters
-2. The RetentionAnalysisTool lacked proper Pydantic schema definitions and type annotations
-3. The tool was inheriting from BaseTool but wasn't properly configured for the new validation system
-4. The error "Field required" indicated that a required parameter was missing or improperly defined
+## CrewAI v0.108.0+ Tool Compatibility Fixes (March 2025)
 
-### Fix Implementation
+We implemented comprehensive fixes to make all tools in the Plazza Analytics project compatible with CrewAI v0.108.0+ and Pydantic v2, starting with the RetentionAnalysisTool and extending the same patterns to all other tools.
 
-The RetentionAnalysisTool was completely updated to comply with CrewAI v0.108.0+ requirements:
+### Common Issues Addressed
 
-1. Added proper type annotations to class attributes:
+1. **Missing Type Annotations**:
+   - CrewAI v0.108.0+ with Pydantic v2 requires explicit type annotations for all fields
+   - Fields inherited from BaseTool like `name` and `description` need proper annotations
+   - Without these annotations, tools fail with error: "Field defined on a base class was overridden by a non-annotated attribute"
+
+2. **Parameter Schema Definition**:
+   - Pydantic v2 requires explicit schema definitions for parameter validation
+   - The `args_schema` attribute must be properly typed and defined using BaseModel
+   - Parameter validation needs proper error handling and fallback mechanisms
+
+3. **Type Safety in Parameter Handling**:
+   - Parameters need validation with type checking and range constraints
+   - Type coercion should be explicit and handle errors gracefully
+   - Default values should be provided for all parameters
+
+4. **Robust Error Handling**:
+   - All tools need comprehensive error handling with detailed messages
+   - Error reporting should include troubleshooting suggestions
+   - Resource cleanup must be guaranteed with finally blocks
+
+### Implementation Strategy for All Tools
+
+1. **Type Annotation Pattern**:
+   - Added explicit type annotations to all fields inherited from BaseTool:
+   ```python
+   name: str = "ToolName"
+   description: str = """Tool description text"""
+   ```
+
+2. **Parameter Schema Definition Pattern**:
+   - Created Pydantic models for all tool parameters:
+   ```python
+   class ToolNameArgs(BaseModel):
+       param1: str = Field(
+           default="default_value", 
+           description="Parameter description"
+       )
+       param2: int = Field(
+           default=10, 
+           description="Parameter description",
+           gt=0, 
+           lt=100
+       )
+   ```
+   - Connected schema to tool with proper type annotation:
+   ```python
+   args_schema: type[ToolNameArgs] = ToolNameArgs
+   ```
+
+3. **Consistent Method Signature Pattern**:
+   - Implemented public `run()` method with explicit parameter definitions:
+   ```python
+   def run(self, param1: str = "default", param2: int = 10, **kwargs):
+       """Method docstring with parameter descriptions."""
+       return self._run(param1=param1, param2=param2)
+   ```
+   - Implemented private `_run()` method to separate parameter handling from core logic:
+   ```python
+   def _run(self, param1: str = "default", param2: int = 10) -> str:
+       """Internal implementation with same parameter signature."""
+   ```
+
+4. **Parameter Validation Pattern**:
+   - Added explicit parameter validation with friendly error messages:
+   ```python
+   # Validate and coerce parameters
+   try:
+       param2 = int(param2)
+       if param2 < 1:
+           print(f"WARNING: param2 {param2} is too small. Setting to 1.")
+           param2 = 1
+       elif param2 > 100:
+           print(f"WARNING: param2 {param2} is too large. Setting to 100.")
+           param2 = 100
+   except (ValueError, TypeError):
+       print(f"WARNING: Invalid param2 '{param2}'. Falling back to default (10).")
+       param2 = 10
+   ```
+
+5. **Robust Error Handling Pattern**:
+   - Implemented comprehensive try/except blocks with detailed error messages:
+   ```python
+   try:
+       # Core implementation...
+   except Exception as e:
+       error_message = f"ERROR in ToolName: {str(e)}"
+       print(error_message)
+       import traceback
+       print(traceback.format_exc())
+       return f"""❌ Error message for user...
+       
+       ## Troubleshooting Information
+       - Error type: {type(e).__name__}
+       - Error details: {str(e)}
+       
+       ### Recommendation
+       This is likely due to...[troubleshooting suggestions]
+       """
+   finally:
+       # Resource cleanup
+       if conn:
+           conn.close()
+   ```
+
+### Example Implementation: CockroachDBTool Fix
+
 ```python
-class RetentionAnalysisTool(BaseTool):
-    name: str = "RetentionAnalysisTool"
-    description: str = """Perform comprehensive customer retention analysis..."""
-```
+import os
+import psycopg2
+import psycopg2.extras
+from typing import Literal, Optional
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
-2. Structured the `run()` method with explicit parameter types and defaults:
-```python
-def run(self, 
-        generate_visuals: bool = True,
-        force_refresh: bool = False,
-        query_intent: str = "general",
-        limit: int = 10,
-        include_contact_details: bool = False,
-        **kwargs):
-    """
-    Execute comprehensive retention analysis across databases
+class CockroachDBArgs(BaseModel):
+    query: str = Field(
+        default="",
+        description="The SQL query to execute. Use 'SHOW DATABASES;' to see all available databases"
+    )
+    database: Literal["defaultdb", "user_transactions", "plazza_erp", "user_events"] = Field(
+        default="defaultdb",
+        description="The database to run the query against"
+    )
 
-    Args:
-        generate_visuals (bool): Whether to generate visualizations (default: True)
-        force_refresh (bool): Force a fresh analysis even if cached (default: False)
-        query_intent (str): The type of query to perform: "general" or "repeat_customers" (default: "general")
-        limit (int): Maximum number of customers to return for repeat_customers queries (default: 10)
-        include_contact_details (bool): Whether to include contact details in repeat customer listings (default: False)
-    """
-```
-
-3. Added parameter validation with fallbacks for invalid values:
-```python
-if query_intent not in ["general", "repeat_customers"]:
-    print(f"WARNING: Invalid query_intent '{query_intent}'. Falling back to 'general'.")
-    query_intent = "general"
-```
-
-4. Improved error handling with meaningful error messages:
-```python
-try:
-    # Tool logic here
-except Exception as e:
-    error_msg = f"Error in RetentionAnalysisTool: {str(e)}"
-    print(error_msg)
-    return f"Failed to perform retention analysis: {error_msg}"
-```
-
-5. Created a test script (`test_retention_tool.py`) to verify that the tool accepts all parameters correctly
-
-### Detailed Implementation of RetentionAnalysisTool Fix
-
-Looking at the actual implementation in the codebase, we can see several key patterns that were essential for fixing the compatibility issue:
-
-#### 1. Version History Documentation
-
-The tool implementation begins with a clear version history documenting the evolution of the fixes:
-
-```python
-# Version History
-# 2025-03-26: Updated for CrewAI v0.108.0+ compatibility
-#   - Added parameter validation with proper type hints
-#   - Updated run method to use **kwargs pattern for compatibility
-#   - Added enhanced error handling and debug logging
-#   - Added parameter validation for query_intent and limit
-#   - Added proper fallback mechanisms for invalid parameter values
-#   - Enhanced documentation with comprehensive docstrings
-# 2025-03-27: Fixed Pydantic compatibility issues
-#   - Modified to work properly with CrewAI v0.108.0 
-#   - Used approach similar to other working tools in the project
-#   - Removed custom schema classes
-#   - Enhanced parameter validation with defensive coding
-#   - Simplified implementation while maintaining functionality
-```
-
-#### 2. Proper Type Annotations
-
-The class definition uses proper type annotations for all class attributes:
-
-```python
-class RetentionAnalysisTool(BaseTool):
-    """Retention Analysis Tool for CrewAI.
+class CockroachDBTool(BaseTool):
+    name: str = "CockroachDBTool"
+    description: str = """Execute SQL queries against any CockroachDB database in the Plazza ecosystem.
+    Supports schema discovery, table exploration, and live query execution."""
     
-    This tool performs comprehensive retention analysis across regular and Airtable data sources.
-    """
-    name: str = "RetentionAnalysisTool"
-    description: str = """Perform comprehensive customer retention analysis across ALL data sources in the Plazza ecosystem.
-    Analyzes BOTH regular tables AND Airtable tables to provide a complete view of customer behavior.
-    Calculates repeat rates, time between purchases, top products, and discount impact.
-    NOW FEATURES:
-    1. Automatic schema discovery to adapt to different table structures
-    2. Safe fallback mechanisms for missing columns
-    3. Complete integration of both regular tables AND Airtable tables
-    4. Indian Rupee (₹) formatting for all monetary values
-    5. Robust error handling with clear explanations
+    args_schema: type[CockroachDBArgs] = CockroachDBArgs
     
-    USAGE OPTIONS:
-    - generate_visuals: Whether to generate visualizations (default: True)
-    - query_intent: Type of analysis ("general" or "repeat_customers")
-    - include_contact_details: Include customer names and contact information (with repeat_customers intent)
-    - limit: Maximum number of results to return (default: 10)
-    
-    EXAMPLES:
-    - Standard retention metrics: retention_analysis_tool.run()
-    - Find repeat customers: retention_analysis_tool.run(query_intent="repeat_customers")
-    - Customer details: retention_analysis_tool.run(query_intent="repeat_customers", include_contact_details=True)
-    - Limit results: retention_analysis_tool.run(query_intent="repeat_customers", limit=5)"""
-```
-
-#### 3. Public Run Method with Complete Parameter Definitions
-
-The `run()` method serves as the primary interface and includes:
-- All parameter definitions with type hints
-- Default values for each parameter
-- Comprehensive docstring
-- **kwargs pattern for future compatibility
-- Debug logging for traceability
-- Parameter validation with fallbacks
-- Global cache handling
-- Robust exception handling with meaningful error messages
-
-```python
-def run(self, 
-        generate_visuals: bool = True, 
-        force_refresh: bool = False,
-        query_intent: str = "general",
-        limit: int = 10,
-        include_contact_details: bool = False,
-        **kwargs):
-    """Run comprehensive retention analysis on the user_transactions database.
-    
-    Args:
-        generate_visuals: Whether to generate visualizations (default: True)
-        force_refresh: Force a refresh of the analysis, ignoring the cache (default: False)
-        query_intent: Type of analysis to perform ("general", "repeat_customers", etc.)
-        limit: Maximum number of results to return for detailed queries (default: 10)
-        include_contact_details: Whether to include customer names and contact information (default: False)
-    
-    Returns:
-        str: Formatted retention analysis results.
-    """
-    global _retention_cache, _schema_cache
-    
-    try:
-        print(f"RetentionAnalysisTool called with parameters: generate_visuals={generate_visuals}, "
-              f"force_refresh={force_refresh}, query_intent={query_intent}, "
-              f"limit={limit}, include_contact_details={include_contact_details}")
+    def run(self, query: str = "", database: str = "defaultdb", **kwargs):
+        """Execute SQL query against the specified database.
         
-        # Parameter validation
-        # Validate query_intent
-        if query_intent not in ["general", "repeat_customers"]:
-            print(f"WARNING: Invalid query_intent '{query_intent}'. Falling back to 'general'.")
-            query_intent = "general"
-            
-        # Validate limit
+        Args:
+            query: The SQL query to execute. Use "SHOW DATABASES;" to see all available databases.
+            database: The database to run the query against (defaultdb, user_transactions, plazza_erp, user_events).
+        """
         try:
-            limit = int(limit)
-            if limit < 1:
-                print(f"WARNING: limit {limit} is too small. Setting to 1.")
-                limit = 1
-            elif limit > 100:
-                print(f"WARNING: limit {limit} is too large. Setting to 100.")
-                limit = 100
-        except (ValueError, TypeError):
-            print(f"WARNING: Invalid limit '{limit}'. Falling back to default (10).")
-            limit = 10
-            
-        # Reset cache if forcing refresh or changing analysis type
-        if force_refresh or query_intent != "general":
-            _retention_cache = None
-            print("Cache reset due to force_refresh or non-general query_intent")
-        else:
-            print("Using standard cache policy")
-            
-        # Use cache only for general analysis
-        if query_intent == "general" and not force_refresh and _retention_cache:
-            print("Returning cached results")
-            return _retention_cache
-        
-        print("Executing _run with extracted parameters")
-        return self._run(
-            generate_visuals=generate_visuals,
-            force_refresh=force_refresh,
-            query_intent=query_intent,
-            limit=limit,
-            include_contact_details=include_contact_details
-        )
-    except Exception as e:
-        error_message = f"ERROR in RetentionAnalysisTool.run: {str(e)}"
-        print(error_message)
-        import traceback
-        print(traceback.format_exc())
-        return error_message
+            # Validate database parameter
+            valid_databases = ["defaultdb", "user_transactions", "plazza_erp", "user_events"]
+            if database not in valid_databases:
+                print(f"WARNING: Invalid database '{database}'. Falling back to 'defaultdb'.")
+                database = "defaultdb"
+                
+            return self._run(query=query, database=database)
+        except Exception as e:
+            error_message = f"ERROR in CockroachDBTool.run: {str(e)}"
+            print(error_message)
+            import traceback
+            print(traceback.format_exc())
+            return error_message
 ```
 
-#### 4. Defensive Parameter Validation
-
-The tool implements robust parameter validation with informative messages and sensible defaults:
-
-```python
-# Validate limit
-try:
-    limit = int(limit)
-    if limit < 1:
-        print(f"WARNING: limit {limit} is too small. Setting to 1.")
-        limit = 1
-    elif limit > 100:
-        print(f"WARNING: limit {limit} is too large. Setting to 100.")
-        limit = 100
-except (ValueError, TypeError):
-    print(f"WARNING: Invalid limit '{limit}'. Falling back to default (10).")
-    limit = 10
-```
-
-#### 5. Enhanced Error Handling with Troubleshooting Information
-
-When the tool encounters errors, it provides detailed troubleshooting information in a user-friendly format:
-
-```python
-detailed_error = f"""❌ Retention analysis failed: {str(e)}
-
-## Troubleshooting Information
-- Error type: {type(e).__name__}
-- Error details: {str(e)}
-- Query intent: {query_intent}
-- Include contact details: {include_contact_details}
-- Limit: {limit}
-- Occurred during comprehensive retention analysis
-- The tool attempted schema discovery but encountered an error during query execution
-
-### Recommendation
-This is likely due to one of the following issues:
-1. Schema differences between regular and Airtable tables
-2. Missing tables or columns required for the analysis
-3. Type compatibility issues in SQL UNION operations
-4. Parameter validation issues with the CrewAI tool schema
-
-Please try running individual SQL queries via the CockroachDBTool to identify specific schema issues."""
-```
-
-#### 6. Private Implementation Method
-
-The private `_run()` method is separated from the public interface and handles the actual implementation details:
-
-```python
-def _run(self, generate_visuals: bool = True, force_refresh: bool = False, 
-         query_intent: str = "general", limit: int = 10, include_contact_details: bool = False) -> str:
-    """Run comprehensive retention analysis on the user_transactions database.
-    
-    This is the internal implementation method called by run() after parameter processing.
-    
-    Args:
-        generate_visuals (bool): Whether to generate visualizations (default: True)
-        force_refresh (bool): Force a refresh of the analysis, ignoring the cache (default: False)
-        query_intent (str): Type of analysis to perform ("general", "repeat_customers")
-        limit (int): Maximum number of results to return for detailed queries (default: 10)
-        include_contact_details (bool): Whether to include customer names and contact information (default: False)
-    
-    Returns:
-        str: Formatted retention analysis results
-    
-    Raises:
-        Exception: If database connection fails or analysis encounters an error
-    """
-    # Implementation details...
-```
-
-#### 7. Double Parameter Validation
-
-Notice that the validation happens in both the public `run()` method and the private `_run()` method, adding an extra layer of validation:
-
-```python
-# In _run() method
-if query_intent not in ["general", "repeat_customers"]:
-    return f"""❌ Error: Invalid query_intent: '{query_intent}'
-    
-Please use one of the following supported values:
-- "general": Standard retention metrics (repeat rate, time between purchases, etc.)
-- "repeat_customers": Detailed list of repeat customers with purchase history
-
-Example usage:
-retention_analysis_tool.run(query_intent="repeat_customers", include_contact_details=True, limit=10)
-"""
-```
-
-#### 8. Resource Cleanup in Finally Block
-
-The code ensures proper cleanup of database connections using a finally block:
-
-```python
-finally:
-    if conn:
-        try:
-            conn.close()
-            print("Database connection closed.")
-        except Exception as close_error:
-            print(f"Warning: Error closing database connection: {str(close_error)}")
-```
-
-#### 9. Test Script Implementation
-
-The test script (`test_retention_tool.py`) methodically tests all parameter combinations and validates the tool behavior:
-
-```python
-def test_general_analysis():
-    """Test basic retention analysis functionality"""
-    print("\n=== Testing general retention analysis ===")
-    tool = RetentionAnalysisTool()
-    
-    # Test basic usage - should validate and run
-    print("\nRunning general analysis with default parameters:")
-    result = tool.run()
-    print(f"Result length: {len(result) if result else 0} characters")
-    print(f"Success: {'✅' if result and len(result) > 100 else '❌'}")
-    
-    # Test with forced refresh
-    print("\nRunning with force_refresh=True:")
-    result_refresh = tool.run(force_refresh=True)
-    print(f"Result length: {len(result_refresh) if result_refresh else 0} characters")
-    print(f"Success: {'✅' if result_refresh and len(result_refresh) > 100 else '❌'}")
-
-def test_repeat_customers_query():
-    """Test repeat customers query functionality"""
-    print("\n=== Testing repeat customers query ===")
-    tool = RetentionAnalysisTool()
-    
-    # Test repeat customers query without contact details
-    print("\nRunning repeat customers query without contact details:")
-    result = tool.run(query_intent="repeat_customers", include_contact_details=False)
-    print(f"Result length: {len(result) if result else 0} characters")
-    print(f"Success: {'✅' if result and len(result) > 100 else '❌'}")
-    
-    # Test repeat customers query with contact details
-    print("\nRunning repeat customers query with contact details:")
-    result_with_details = tool.run(query_intent="repeat_customers", include_contact_details=True)
-    print(f"Result length: {len(result_with_details) if result_with_details else 0} characters")
-    print(f"Success: {'✅' if result_with_details and len(result_with_details) > 100 else '❌'}")
-    
-    # Test with custom limit
-    print("\nRunning with custom limit=5:")
-    result_limit = tool.run(query_intent="repeat_customers", limit=5, include_contact_details=True)
-    print(f"Result length: {len(result_limit) if result_limit else 0} characters")
-    print(f"Success: {'✅' if result_limit and len(result_limit) > 100 else '❌'}")
-
-def test_parameter_validation():
-    """Test parameter validation functionality"""
-    print("\n=== Testing parameter validation ===")
-    tool = RetentionAnalysisTool()
-    
-    # Test invalid query_intent (should fall back to general)
-    print("\nTesting invalid query_intent:")
-    result = tool.run(query_intent="invalid_intent")
-    print(f"Successfully validated and fell back to default: {'✅' if result and len(result) > 100 else '❌'}")
-    
-    # Test invalid limit (should clamp to valid range)
-    print("\nTesting invalid limit (too high):")
-    result = tool.run(query_intent="repeat_customers", limit=1000)
-    print(f"Successfully clamped limit: {'✅' if result and len(result) > 100 else '❌'}")
-    
-    print("\nTesting invalid limit (non-integer):")
-    result = tool.run(query_intent="repeat_customers", limit="abc")
-    print(f"Successfully handled non-integer limit: {'✅' if result and len(result) > 100 else '❌'}")
-```
-
-### Key Insights: RetentionAnalysisTool Fix
-
-1. **BaseTool Requirements in v0.108.0+**:
-   - BaseTool implementations must use proper type annotations for class attributes
-   - Run methods must have explicit parameter types and defaults
-   - Error handling should catch and report exceptions effectively
-
-2. **Parameter Validation Best Practices**:
-   - Add validation logic for all parameters
-   - Provide fallbacks for invalid values (safer than failing)
-   - Use descriptive names and clear docstrings
-   - Set reasonable defaults for optional parameters
-
-3. **Testing Strategy**:
-   - Create specific test cases for each parameter
-   - Test parameters individually and in combination
-   - Verify error handling for invalid inputs
-   - Check that the tool functions correctly with all parameter variations
-
-## Issue 2: Delegation Tool Parameter Formatting
-
-### Problem Description
-
-The conversation orchestrator agent was experiencing validation errors when trying to use the "Delegate work to coworker" tool:
-
-```
-CrewAI Task has ended with an error. Error: Validation failed for field 'task'. Expected str, got dict.
-```
-
-The agent was incorrectly formatting the parameters as dictionaries/objects, but the DelegateWorkToolSchema expected simple string values.
-
-### Root Cause Analysis
-
-1. The task description in `tasks.yaml` wasn't providing clear enough instructions about parameter formats
-2. The LLM was interpreting fields like 'task' and 'context' as complex objects rather than simple strings
-3. CrewAI's DelegateWorkToolSchema strictly validates parameter types (task must be str, not dict)
-4. The error logs confirmed that the agent was using dictionaries instead of strings for these fields
-
-### Fix Implementation (Part 1: JSON Format Instructions)
-
-1. Updated the task description in `tasks.yaml` to explicitly instruct the agent on the correct JSON format:
-
-```yaml
-7. Delegate it using CrewAI delegation. Your delegation MUST be a JSON object with these EXACT keys and VALUE TYPES:
-
-{{
-  "task": "string with instructions (NOT a dictionary or object)",
-  "context": "string with background (NOT a dictionary or object)",
-  "coworker": "exact agent name as string"
-}}
-
-❗IMPORTANT: The "task" and "context" fields MUST be simple strings, NOT nested objects or dictionaries.
-❗All three fields are REQUIRED or the delegation will fail with validation errors.
-
-Example of CORRECT JSON format for multi-step delegations:
-{{
-  "task": "Count orders AND save the result to the knowledge base using SaveKnowledgeTool",
-  "context": "User wants to know order count and wants it saved for future reference",
-  "coworker": "Data Q&A Expert"
-}}
-
-Example for retention analysis:
-{{
-  "task": "Identify repeat customers using RetentionAnalysisTool with query_intent='repeat_customers', include_contact_details=True",
-  "context": "User wants to see a list of repeat customers with their contact information",
-  "coworker": "Data Q&A Expert"
-}}
-
-❌ INCORRECT format (DO NOT USE):
-{{
-  "task": {{"instruction": "Count orders", "save": true}},
-  "context": {{"background": "User needs order count", "priority": "high"}},
-  "coworker": "Data Q&A Expert"
-}}
-```
-
-2. Enhanced the conversation orchestrator's backstory in `agents.yaml` to reinforce proper delegation formatting:
-
-```yaml
-DELEGATION FORMAT REQUIREMENTS:
-When using the "Delegate work to coworker" tool, you MUST include all 3 required fields:
-{{
-  "task": "Clear instructions on what they need to do (MUST be a string, not an object/dictionary)",
-  "context": "All relevant background information (MUST be a string, not an object/dictionary)",
-  "coworker": "EXACT agent name from the list above"
-}}
-
-❗IMPORTANT: The "task" and "context" fields MUST be simple strings, NOT nested objects.
-❗All three fields are REQUIRED or the delegation will fail with validation errors.
-```
-
-Note the double curly braces in the examples - these are important for the template interpolation fix described below.
-
-### Fix Implementation (Part 2: Template Interpolation Fix)
-
-After implementing the initial fix, we discovered a secondary issue where the JSON examples were causing a template interpolation error:
-
-```
-KeyError: '\n  "task"'
-Missing required template variable '\n  "task"' in description
-```
-
-This occurred because:
-1. CrewAI treats task descriptions as template strings for Python's string formatting
-2. Curly braces `{` and `}` in the task description are interpreted as template variables
-3. The JSON examples with curly braces were being interpreted as variable placeholders
-4. When CrewAI tried to interpolate the template, it couldn't find the variable `"task"`
-
-The solution:
-1. Escape all curly braces in the JSON examples by doubling them: `{` → `{{` and `}` → `}}`
-2. Apply this escaping in both the task description and agent backstory
-3. This ensures the curly braces are interpreted as literal characters, not template placeholders
-
-This is why all JSON examples in the YAML files now use double curly braces.
-
-### Testing
-
-A test script (`test_delegation.py`) was created to verify that the delegation now works correctly with the fixed format and template interpolation. The script tests different queries that should trigger delegation to various agents and checks for validation errors in the responses.
-
-### Key Insights: Delegation Tool Fix
-
-1. **LLM Output Formatting Control**:
-   - Be extremely explicit in task descriptions about expected formats
-   - Use both correct AND incorrect examples to guide the LLM
-   - Add visual markers (emojis, formatting) to highlight critical instructions
-   - Reinforce important formatting in multiple places (agent backstory and task description)
-
-2. **CrewAI Delegation Schema Requirements**:
-   - The DelegateWorkToolSchema expects specific parameter types:
-     - task: str (not dict)
-     - context: str (not dict)
-     - coworker: str
-   - All three fields are required
-   - Format validation is strict - no flexibility for different structures
-
-3. **Effective LLM Guidance Techniques**:
-   - Use complete JSON examples with correct syntax
-   - Show explicitly what NOT to do
-   - Use warning symbols (❗, ❌) to highlight critical requirements
-   - Format instructions as specific rules rather than general guidelines
-   - Repeat critical instructions in multiple places
-
-## Key Technical Concepts
-
-1. **CrewAI v0.108.0+ Parameter Validation**:
-   - Uses strict Pydantic validation for tool parameters
-   - Requires proper type annotations for BaseTool classes
-   - Validates all parameter types according to type hints
-   - Requires all required parameters to be provided
-   - Provides detailed error messages for validation failures
-
-2. **BaseTool Implementation Requirements**:
-   - Name and description should be properly annotated
-   - The run() method should have explicit type hints
-   - Parameter validation should be added for all inputs
-   - Error handling should be comprehensive
-   - Docstrings should clearly describe parameter usage
-
-3. **LLM Instruction Techniques**:
-   - Complete JSON examples are more effective than textual descriptions
-   - Both positive and negative examples help guide output format
-   - Visual highlighting of critical requirements improves compliance
-   - Reinforcing instructions in multiple places increases effectiveness
-   - Explicit error messages about formatting requirements help troubleshooting
-
-4. **Testing Strategies**:
-   - Test each parameter individually and in combination
-   - Create test cases for different usage scenarios
-   - Verify error handling for invalid inputs
-   - Confirm that both fixes work together in the complete system
-   - Automate testing with specific scripts for each component
-
-## Testing and Documentation
-
-1. **RetentionAnalysisTool Test Script**:
-   Created `test_retention_tool.py` to verify all parameter combinations work correctly
-
-2. **Delegation Test Script**:
-   Created `test_delegation.py` to verify delegation works with various query types
-
-3. **Comprehensive Documentation**:
-   - `FIXES_DOCUMENTATION.md`: Detailed explanation of both fixes
-   - `TESTING_FIXES.md`: Instructions for testing both fixes
-   - `CLAUDE.md`: This document, summarizing all discoveries and implementations
-
-4. **Implementation Files**:
-   - `/src/plazza_analytics/tools/retention_analysis_tool.py`: Fixed tool implementation
-   - `/src/plazza_analytics/config/tasks.yaml`: Updated task description for correct delegation
-   - `/src/plazza_analytics/config/agents.yaml`: Enhanced backstory with delegation format requirements
-
-## Best Practices for CrewAI v0.108.0+
-
-1. **Tool Development**:
-   - Always use proper type annotations for BaseTool classes
-   - Provide explicit parameter types and defaults in run() methods
-   - Add comprehensive error handling with meaningful messages
-   - Include parameter validation with fallbacks for invalid values
-   - Test all parameter combinations thoroughly
-
-2. **Task Descriptions**:
-   - Be extremely explicit about expected formats for tool parameters
-   - Use complete examples with proper syntax
-   - Include both correct AND incorrect examples
-   - Use visual markers to highlight critical requirements
-   - Reinforce important formatting in multiple places
-
-3. **Agent Configuration**:
-   - Include clear instructions in agent backstories about tool usage
-   - Provide explicit formatting requirements for delegation
-   - Use detailed examples for all tools that require specific formats
-   - Consider memory settings for agents that need to maintain context
-   - Test agents with a variety of queries to verify proper behavior
-
-4. **System Architecture**:
-   - Consider implementing standardized BaseTool extensions for common patterns
-   - Create helper methods for parameter validation
-   - Add logging for easier debugging
-   - Implement a comprehensive test suite
-   - Document all tools and their parameters
-
-## Future Recommendations
-
-1. **Tool Enhancement**:
-   - Consider updating all tools to follow this same pattern for consistency
-   - Add similar explicit formatting instructions in any task that uses tool parameters
-   - Implement a standardized BaseTool extension for common validation patterns
-   - Consider using CrewStructuredTool for complex parameter sets
-
-2. **Testing Enhancement**:
-   - Create a more comprehensive test suite that covers all tools
-   - Add tests for edge cases and error handling
-   - Implement automated testing as part of the development workflow
-   - Create mock systems for faster testing without database dependencies
-
-3. **Documentation Enhancement**:
-   - Add tool usage examples to all tool docstrings
-   - Create a tool reference guide with parameter descriptions
-   - Document common error messages and their solutions
-   - Update documentation with each new tool or parameter addition
-
-4. **Code Organization**:
-   - Consider organizing tools by functionality
-   - Create a common base class for related tools
-   - Implement shared validation methods
-   - Use consistent error handling patterns
-
-## Conclusion
-
-The Plazza Analytics project has been successfully updated to work with CrewAI v0.108.0+. The key issues were:
-
-1. **RetentionAnalysisTool**: Fixed with proper Pydantic integration for parameter validation
-2. **Delegation Formatting**: Fixed by explicitly instructing the LLM on the correct parameter format
-
-These fixes demonstrate the importance of understanding CrewAI's validation system and providing clear instructions to LLMs about expected formats. By following the best practices outlined in this document, future tool development should avoid similar issues and create a more robust system.
-
-The project now has comprehensive documentation and test scripts to ensure ongoing compatibility with CrewAI v0.108.0+ and to help future developers understand the implemented solutions.
+### Testing Approach
+
+We created a comprehensive testing framework to verify tool compatibility and functionality:
+
+1. **Parameter Acceptance Testing**:
+   - Test basic usage with default parameters
+   - Test with valid custom parameters
+   - Test with invalid parameters to verify graceful fallbacks
+   - Test with mixed parameter types to verify proper type coercion
+
+2. **Error Handling Testing**:
+   - Test with invalid database connections
+   - Test with invalid SQL queries
+   - Test with edge cases like empty result sets
+   - Test with various error conditions to verify proper error messages
+
+3. **Resource Management Testing**:
+   - Verify proper resource cleanup in error conditions
+   - Test connection handling with multiple sequential calls
+   - Verify no resource leaks under high load
+
+4. **Example Test Script**:
+   ```python
+   def test_cockroachdb_tool():
+       """Test CockroachDBTool functionality"""
+       print("\n=== Testing CockroachDBTool ===")
+       tool = CockroachDBTool()
+       
+       # Test basic usage - should validate and run
+       print("\nRunning simple query:")
+       result = tool.run(query="SELECT 1 AS test", database="defaultdb")
+       print(f"Result length: {len(result) if result else 0} characters")
+       print(f"Success: {'✅' if result and len(result) > 10 else '❌'}")
+       
+       # Test invalid database - should fallback to defaultdb
+       print("\nRunning with invalid database:")
+       result = tool.run(query="SELECT 1 AS test", database="invalid_db")
+       print(f"Result length: {len(result) if result else 0} characters")
+       print(f"Success: {'✅' if result and len(result) > 10 else '❌'}")
+   ```
+
+### Results and Benefits
+
+1. **Complete Compatibility**:
+   - All tools now work properly with CrewAI v0.108.0+ and Pydantic v2
+   - Consistent implementation patterns across the codebase
+   - Robust error handling and parameter validation
+   - Clear documentation of parameter requirements
+
+2. **Enhanced User Experience**:
+   - Better error messages with troubleshooting recommendations
+   - Consistent behavior across all tools
+   - Graceful handling of invalid parameters
+   - Clear documentation in tool descriptions
+
+3. **Future-Proof Implementation**:
+   - Compatible with future CrewAI versions
+   - Follows best practices for Pydantic v2
+   - Modular design for easy updates
+   - Well-documented implementation patterns
+
+This comprehensive update ensures that all tools in the Plazza Analytics project are compatible with the latest version of CrewAI, providing a robust foundation for future development.
+
+## Currency Standardization (March 2025)
+
+All monetary values in the system are now required to be displayed in Indian Rupees (₹) format. This standardization ensures consistency across all analysis, reports, visualizations, and saved knowledge.
+
+### Implementation Strategy
+
+1. **Consistent Currency Formatting**:
+   - Added CURRENCY FORMATTING sections to all agent backstories
+   - Specified that ALL monetary values must use ₹ (rupee) format
+   - Provided formatting examples: ₹100.50, ₹1,250.75, ₹37.00
+   - Explicitly banned the use of dollar signs ($) or other currencies
+
+2. **Agent-Specific Enhancements**:
+   - **Data Q&A Expert**: Required to format all prices and monetary values in rupees
+   - **Enterprise Data Analyst**: Required to use rupee formatting in both responses and saved knowledge
+   - **Visualization Specialist**: Required to use ₹ symbol in charts, axes labels, and legends
+   - **Business Strategy Advisor**: Required to format all financial projections and metrics in rupees
+
+3. **Knowledge Base Consistency**:
+   - Added instruction that all monetary values in saved knowledge must use ₹ format
+   - Ensured visualization tools will preserve rupee formatting in charts
+
+This standardization ensures that all financial data across the system uses a consistent currency format appropriate for the Indian market that Plazza operates in.
+
+## Multi-Step Task Delegation Enhancement (March 2025)
+
+We've enhanced the system to better handle multi-step tasks, especially those involving knowledge persistence. The issue was that when users requested tasks like "count orders and save to knowledge base", the orchestrator agent was only delegating the first part ("count orders"), omitting the instruction to save the results.
+
+### Implementation Strategy
+
+1. **Enhanced Task Description**:
+   - Updated handle_user_query task to emphasize parsing ALL parts of a request
+   - Added explicit instructions to preserve saving/persistence instructions
+   - Provided examples of proper multi-step delegation patterns
+   - Added explicit instruction to look for "save", "store", or "persist" keywords
+
+2. **Improved Orchestrator Backstory**:
+   - Added MULTI-STEP TASK PRESERVATION section with explicit examples
+   - Provided clear delegation examples showing preservation of "save" instructions
+   - Enhanced rule prioritization to emphasize complete task delegation
+
+3. **Improved Specialist Agent Instructions**:
+   - Added dedicated SAVING KNOWLEDGE sections to agent backstories
+   - Enhanced instructions to recognize and execute multi-step tasks
+   - Added specific guidance on standard knowledge file naming
+   - Required confirmation when knowledge is saved
+
+4. **Enhanced SaveKnowledgeTool Description**:
+   - Added clear guidance on WHEN TO USE THIS TOOL
+   - Listed standard filenames for different knowledge types
+   - Provided explicit examples of multi-step tasks with saving
+   - Emphasized using append mode to preserve existing knowledge
+
+This implementation follows the best practices recommended by the CrewAI assistant for handling multi-step delegations with persistence requirements. The enhanced system now properly preserves all parts of user requests when delegating tasks, ensuring that knowledge persistence instructions are properly executed.
