@@ -1,5 +1,1164 @@
 # CrewAI Project Documentation
 
+## AI Agent Guide to Asana Manager Tools (April 2024)
+
+This guide is designed for AI agents working with the CrewAI Asana Manager tools, providing detailed instructions on how to effectively use the various tools for Asana project management and documentation integration.
+
+### Quick Start for AI Agents: One Command to Rule Them All
+
+For AI agents, the easiest way to use the Asana Manager tools is through the main menu system. This single command provides access to all tools:
+
+```bash
+# Step 1: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+
+# Step 2: Change to the project directory
+cd /Users/aniruddhasen/Projects/CrewAI/asana_manager
+
+# Step 3: Run the main menu
+python -m src.asana_manager.main
+```
+
+Then select the appropriate option (1-8) from the menu for your task. This is the recommended approach for most interactions with the Asana Manager.
+
+For more detailed instructions, specific tool usage, or advanced operations, see the relevant sections below.
+
+### ⚠️ IMPORTANT: Virtual Environment Setup ⚠️
+
+**Before using ANY tool or command in this guide, you MUST first activate the virtual environment:**
+
+```bash
+# REQUIRED FIRST STEP: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+```
+
+Without activating the virtual environment first, you will encounter errors like:
+```
+ModuleNotFoundError: No module named 'crewai'
+```
+
+All commands in this guide assume you have already activated the virtual environment. The virtual environment contains all necessary dependencies including CrewAI, Python-dotenv, PyYAML, and the Asana API libraries.
+
+### Key Prerequisites Checklist
+
+Before attempting to use any tools:
+
+1. ✅ **ALWAYS activate the virtual environment first**:
+   ```bash
+   source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+   ```
+
+2. ✅ **Verify Asana API token is available**:
+   ```bash
+   echo $ASANA_API_TOKEN
+   # Should display your token
+   ```
+
+3. ✅ **Run all commands from the project root directory**:
+   ```bash
+   cd /Users/aniruddhasen/Projects/CrewAI/asana_manager
+   ```
+
+Skip any of these steps and the tools will not work!
+
+### Overview of Asana Manager Tools
+
+The Asana Manager project provides a comprehensive suite of tools to bridge the gap between documentation and Asana project management. These tools enable:
+
+1. **Project Creation from Markdown**: Generate complete Asana projects directly from structured markdown documents
+2. **Project Comparison**: Compare existing Asana projects with documentation to identify misalignment
+3. **Two-Way Synchronization**: Keep Asana projects and documentation in sync
+4. **Template Generation**: Create markdown templates as starting points for project documentation
+5. **Flexible Format Support**: Work with various markdown formats through template specifications
+
+### Tool Selection Guide
+
+Choose the appropriate tool based on your task:
+
+| Task | Tool to Use | Key Features |
+|------|-------------|-------------|
+| Create a project from markdown | `MarkdownToAsanaTool` or standalone script | Hierarchical task creation, automatic section handling |
+| Compare project vs. documentation | `CompareTasksWithDocumentationTool` or standalone script | Using project GID for direct access, smart task matching, various template formats |
+| Generate project template | `CreateTemplateMdFileTool` or standalone script | Different project types (generic, software, marketing) |
+| Find projects by name | `FindProjectByNameTool` or `find_project.py` | Fuzzy matching across workspaces |
+| Browse project details | `BrowseProjectTool` or `browse_project.py` | View sections, tasks, and project information |
+| List available workspaces | `ListWorkspacesTool` or `list_workspaces_and_teams.py` | Automatic discovery and caching |
+| Task management | `CreateTaskTool`, `AssignTaskTool`, `SetDueDateTool` | Core Asana operations |
+| List all projects | `list_projects.py` or main.py option 3 | Shows all projects across all workspaces |
+
+### Markdown Format Templates and Document Preparation
+
+The comparison tool supports three markdown format templates for maximum flexibility. Proper document preparation is crucial for effective comparison.
+
+#### 1. Standard Format (default)
+```markdown
+## Section Name
+- [ ] Uncompleted task
+- [x] Completed task
+```
+
+#### 2. Headings Format
+```markdown
+## Section Name
+### Task 1
+### Task 2 (COMPLETED)
+#### Subtask 1
+```
+
+#### 3. Custom Format (with regex pattern)
+```markdown
+Task: Do something | Status: Incomplete
+Task: Another thing | Status: Complete
+```
+
+#### Document Preparation Guidelines
+
+For optimal task matching between Asana and markdown, follow these guidelines:
+
+1. **Choose the Right Template**: 
+   - **Standard Format**: Best for GitHub-style task lists with checkboxes
+   - **Headings Format**: Ideal for hierarchical documents with heading levels
+   - **Custom Format**: For custom notation or specialized formats
+
+2. **Structure Your Document**:
+   - Use clear section headings with `##` (level 2 headings)
+   - Group related tasks under appropriate sections
+   - Use consistent terminology between Asana tasks and markdown
+   - Keep task descriptions concise and focused
+
+3. **Section Filtering**: 
+   - Organize tasks under a dedicated section like `## Implementation Checklist`
+   - Use the `--section` parameter to focus only on relevant parts
+   - Sections are identified by `##` level headings (not `###` or `####`)
+
+4. **Example Well-Structured Document**:
+```markdown
+# Project Documentation
+
+## Overview
+(Project overview text here)
+
+## Implementation Checklist
+This section contains tasks to be completed.
+
+- [ ] Configure user authentication
+- [ ] Implement dashboard UI
+- [ ] Create database schema
+- [x] Set up CI/CD pipeline
+- [ ] Write test cases
+
+## Timeline
+(Timeline information here)
+```
+
+Use this with: `--section "Implementation Checklist"`
+
+5. **Task Matching Optimization**:
+   - Use identical or very similar wording between Asana and markdown
+   - Be consistent with capitalization and terminology
+   - Include key identifiers or IDs in both systems
+   - Add task context for better similarity matching
+   - Adjust similarity threshold with `--similarity` parameter (default: 0.5)
+
+6. **Troubleshooting Tips**:
+   - If tasks aren't matching: Check for wording differences
+   - If no tasks found: Verify template format matches document structure
+   - If multiple matches for one task: Make task descriptions more specific
+   - If section not found: Check heading level (must be `##`)
+   - Use `--verbose` flag to see detailed matching information
+
+#### Advanced Topics and Limitations
+
+1. **Subtask Handling and Visibility**:
+   - **Current Limitation**: The `compare_project.py` and `browse_project.py` tools only work with top-level tasks by default
+   - **Missing Feature**: There is currently no parameter or flag to display subtasks in the standard output
+   - **Technical Reason**: The Asana API separates subtasks from their parent tasks, requiring additional API calls to fetch them
+   - **Manual Solution**: Add a `--show-subtasks` parameter to browse_project.py (implementation instructions below)
+   - **Hierarchical Fix**: For proper subtask integration, modify both comparison and browsing tools to make additional API calls
+
+   **Adding Subtask Support to browse_project.py**:
+   ```python
+   # Add to browse_project.py argument parser:
+   parser.add_argument(
+       "--show-subtasks",
+       action="store_true",
+       help="Include subtasks in the output"
+   )
+   
+   # Add after retrieving each task (around line 146):
+   if args.show_subtasks:
+       print(f"   Subtasks:")
+       subtask_url = f"{BASE_URL}/tasks/{task['gid']}/subtasks"
+       try:
+           subtask_response = requests.get(subtask_url, headers=HEADERS)
+           subtask_response.raise_for_status()
+           subtasks = subtask_response.json().get('data', [])
+           
+           if subtasks:
+               for i, subtask in enumerate(subtasks, 1):
+                   subtask_status = "✅" if subtask.get("completed", False) else "⬜"
+                   print(f"   {i}. {subtask_status} {subtask['name']} (GID: {subtask['gid']})")
+           else:
+               print("   No subtasks found")
+       except Exception as e:
+           print(f"   Error retrieving subtasks: {e}")
+   ```
+
+2. **Direct Subtask Access via API**:
+   ```bash
+   # First get the parent task GID
+   python -m src.asana_manager.main
+   # Select option 5 (Browse project) to find task GIDs
+   
+   # Then use Asana API directly to get subtasks
+   curl -H "Authorization: Bearer $ASANA_API_TOKEN" \
+        https://app.asana.com/api/1.0/tasks/[TASK_GID]/subtasks
+   
+   # For detailed information about a specific subtask
+   curl -H "Authorization: Bearer $ASANA_API_TOKEN" \
+        https://app.asana.com/api/1.0/tasks/[SUBTASK_GID]
+   ```
+
+3. **Section Extraction Clarification**:
+   - **Why Section Filtering May Fail**: Section filtering uses regex patterns that depend on specific markdown structures
+   - **Common Issues**:
+     1. **Inconsistent Heading Levels**: Make sure your section uses the exact heading level specified in `--heading-level`
+     2. **Extra Whitespace**: Extra lines or spaces can break pattern matching
+     3. **Special Characters**: Some special characters may interfere with regex patterns
+     4. **Missing Boundary Markers**: Sections need clear boundaries (either a new section or end of file)
+   
+   **Debugging Section Extraction**:
+   ```bash
+   # Analyze markdown structure with this command
+   python -c "import re; f=open('your_document.md', 'r'); content=f.read(); print(re.findall(r'#{3} (.*?)$', content, re.MULTILINE))"
+   
+   # Test section extraction with different heading levels
+   python compare_project.py --project-gid "1234567890" "your_document.md" --template headings --heading-level 2
+   python compare_project.py --project-gid "1234567890" "your_document.md" --template headings --heading-level 3
+   ```
+
+4. **Hierarchical Comparison Details**:
+   - **Structural Mismatch**: Asana's hierarchy (workspace→project→section→task→subtask) doesn't perfectly match markdown's structure
+   - **Document Preparation Solutions**:
+     1. **Depth-First Structure**: Create a document that fully represents hierarchy by indentation level
+     ```markdown
+     ## Project Name
+     ### Section One
+     - [ ] Parent Task A
+         - [ ] Subtask A1
+             - [ ] Sub-subtask A1.1
+         - [ ] Subtask A2
+     - [ ] Parent Task B
+     
+     ### Section Two
+     - [ ] Parent Task C
+     ```
+     
+     2. **Multi-Stage Comparison**: Compare at each hierarchy level separately
+     ```bash
+     # First compare top-level structure
+     python compare_project.py --project-gid "1234567890" "overview.md" --template headings
+     
+     # Then compare specific sections
+     python compare_project.py --project-gid "1234567890" "section_one_details.md" --section-filter "Section One"
+     
+     # Finally compare specific tasks and subtasks
+     python compare_project.py --project-gid "1234567890" "task_a_details.md" --task-filter "Parent Task A"
+     ```
+     
+     3. **Custom Task-Subtask Matching**: Implement a custom script for hierarchical comparison
+     ```python
+     # Sample code to recursively match tasks and subtasks
+     def compare_with_hierarchy(project_gid, markdown_file):
+         # Get all tasks with their subtasks
+         all_tasks = get_project_tasks_with_subtasks(project_gid)
+         
+         # Parse markdown with hierarchical structure
+         md_items = parse_markdown_with_hierarchy(markdown_file)
+         
+         # Perform hierarchical matching
+         matches = match_hierarchical_items(all_tasks, md_items)
+         
+         return matches
+     ```
+
+5. **Fixing Structure Mismatches**:
+   - **Enhanced API Integration**: Implement a specialized hierarchical comparison tool
+   ```bash
+   # Create a new script for hierarchical comparison
+   python compare_hierarchical.py --project-gid "1234567890" "your_document.md" --recursion-depth 3
+   ```
+   
+   - **Document Structure Standardization**: Enforce consistent document structure with templates
+   ```bash
+   # Generate a hierarchical template
+   python create_project_from_markdown.py --create-template --template-output hierarchical_template.md --template-type hierarchical
+   ```
+   
+   - **Asana-Markdown Bridge**: Create a bidirectional sync tool to keep structures aligned
+   ```bash
+   # Sync from Asana to markdown (keeping hierarchy)
+   python sync_asana_to_markdown.py --project-gid "1234567890" --output hierarchical_doc.md --preserve-hierarchy
+   ```
+
+6. **Non-Interactive Usage of main.py**:
+   When running main.py in scripts or non-interactive environments, the `input()` function can cause an EOF error. To work around this:
+   ```bash
+   # Provide input via echo and pipe
+   echo "5" | python -m src.asana_manager.main
+   
+   # Or use expect script for more complex interactions
+   pip install pexpect
+   python -c 'import pexpect; p=pexpect.spawn("python -m src.asana_manager.main"); p.expect("Enter task number"); p.sendline("5"); p.interact()'
+   
+   # Best practice: Use standalone scripts directly instead
+   # Example: Instead of selecting menu option 4
+   python find_project.py --project-name "Project Name"
+   ```
+
+### Running the Tools
+
+#### As CrewAI Tools
+
+Use these tools directly in your CrewAI agent workflows:
+
+```python
+from src.asana_manager.tools.asana_tools import CompareTasksWithDocumentationTool
+from src.asana_manager.tools.markdown_to_asana import MarkdownToAsanaTool, CreateTemplateMdFileTool
+
+# Initialize the tools
+comparison_tool = CompareTasksWithDocumentationTool()
+markdown_to_asana = MarkdownToAsanaTool()
+template_creator = CreateTemplateMdFileTool()
+
+# Example: Compare project with documentation (with template options)
+result = comparison_tool._run(
+    project_gid="1234567890",
+    markdown_file_path="/path/to/documentation.md",
+    template="headings",
+    heading_level=3,
+    section_filter="Implementation Checklist"
+)
+
+# Example: Create project from markdown
+project = markdown_to_asana._run(
+    markdown_file_path="/path/to/project.md",
+    project_name="New Project from Documentation"
+)
+
+# Example: Generate template markdown file
+template = template_creator._run(
+    output_path="/path/to/output.md",
+    project_type="software"  # options: generic, software, marketing
+)
+```
+
+#### As Standalone Scripts
+
+For direct command-line usage:
+
+```bash
+# Create project from markdown
+python create_project_from_markdown.py --create-project --markdown-file project.md --project-name "New Project"
+
+# Create template file
+python create_project_from_markdown.py --create-template --template-output template.md --template-type software
+
+# Compare project using project GID (recommended method)
+python compare_project.py --project-gid "1234567890123456" documentation.md
+
+# Compare using headings format with project GID
+python compare_project.py --project-gid "1234567890123456" documentation.md --template headings --heading-level 3
+
+# Compare using custom format with project GID
+python compare_project.py --project-gid "1234567890123456" documentation.md --template custom --pattern "Task: (.+?) \| Status: (.+?)$"
+
+# Only compare a specific section with project GID
+python compare_project.py --project-gid "1234567890123456" documentation.md --section "Implementation Checklist"
+
+# Generate JSON for missing tasks with project GID
+python compare_project.py --project-gid "1234567890123456" documentation.md --generate-json
+
+# Add missing tasks to Asana with project GID
+python compare_project.py --project-gid "1234567890123456" documentation.md --update-asana
+
+# Alternative using project name (slower, searches across workspaces)
+python compare_project.py --project-name "Project Name" documentation.md
+```
+
+### Advanced Configuration
+
+#### Environment Variables Setup
+
+The tools use environment variables for API configuration:
+
+```
+ASANA_API_TOKEN=your_personal_access_token
+ASANA_WORKSPACE_GID=optional_default_workspace_id
+ASANA_TEAM_GID=optional_default_team_id
+```
+
+These can be stored in either:
+1. `/Users/aniruddhasen/Projects/Master_ENV/.env` (preferred)
+2. Local `.env` file in the project directory
+3. System environment variables
+
+#### Template Creation Recommendations
+
+For optimal results when creating templates:
+
+1. **For Section-Based Projects**: Use H2 (`##`) for sections and H3 (`###`) for subsections
+2. **For Timeline-Based Projects**: Include explicit phase names in section headers
+3. **For Task Dependencies**: Create a clear hierarchy with proper heading levels
+4. **For Multiple Assignees**: Indicate ownership in task descriptions
+
+#### Template Locations
+
+Default templates are available at:
+- `/Users/aniruddhasen/Projects/CrewAI/asana_manager/templates/generic.md`
+- `/Users/aniruddhasen/Projects/CrewAI/asana_manager/templates/software.md`
+- `/Users/aniruddhasen/Projects/CrewAI/asana_manager/templates/marketing.md`
+
+### Common Issues and Solutions
+
+| Issue | Solution |
+|-------|----------|
+| No workspaces found | Check API token validity and permissions |
+| No teams found | Some personal Asana accounts may not have teams; system will use personal projects |
+| Template parsing errors | Validate markdown format against expected template |
+| No tasks extracted | Try different template format or check section names |
+| Low similarity matches | Adjust similarity threshold with `--similarity 0.6` |
+| KeyError accessing API data | The Asana API uses a nested structure with 'data' keys. Use `.get("data", default)` when accessing data |
+| Project/Task not found | Verify the GID is correct using `list_projects.py` or main.py option 3 |
+| API structure changes | Use the debug output in tools to see the actual data structure returned |
+| Main menu import error | Make sure you're running `python -m src.asana_manager.main` from the asana_manager directory |
+| Option 5 (Browse Project) KeyError | This is fixed in the latest version. If you encounter it, update your code |
+| Input validation errors | Make sure to provide valid GIDs when prompted by main.py options |
+
+### Asana API Response Format
+
+Understanding the Asana API response structure is critical when working with these tools:
+
+1. **Nested Data Structure**: The Asana API wraps most responses in a `data` field:
+   ```json
+   {
+     "data": {
+       "gid": "1234567890",
+       "name": "Project Name",
+       "notes": "Project Description"
+     }
+   }
+   ```
+
+2. **Collections as Arrays**: Lists of items are arrays inside the `data` field:
+   ```json
+   {
+     "data": [
+       { "gid": "1111", "name": "Item 1" },
+       { "gid": "2222", "name": "Item 2" }
+     ]
+   }
+   ```
+
+3. **Nested Objects**: Some fields like `assignee` are nested objects:
+   ```json
+   {
+     "assignee": {
+       "gid": "3456789",
+       "name": "User Name"
+     }
+   }
+   ```
+
+All tools in this repository have been updated to handle this structure, but you should be aware of it when processing results.
+
+### Implementation Details for AI Integration
+
+For agents needing deeper integration with the tools:
+
+1. **Workspace and Team Discovery**: The tools automatically discover and cache workspace/team GIDs
+2. **Smart Task Matching**: Uses a combination of substring containment and word overlap algorithms
+3. **Hierarchical Parsing**: Creates proper parent-child relationships between tasks and subtasks
+4. **Error Resilience**: Implements comprehensive fallbacks for API and parsing errors
+5. **Format Flexibility**: Adapts to different markdown structures with pluggable templates
+6. **API Response Handling**: All tools properly handle Asana's nested data structure
+
+By using these tools effectively, AI agents can bridge documentation and project management seamlessly, ensuring alignment between project plans and execution.
+
+### Detailed Tool Usage Instructions
+
+#### Environment Variables
+
+After activating the virtual environment (which is a required first step), check that your Asana API token is properly set:
+
+```bash
+# Check if Asana API token is set
+echo $ASANA_API_TOKEN
+
+# If not set, set it temporarily
+# export ASANA_API_TOKEN="your_personal_access_token"
+```
+
+The tools will automatically use this environment variable for API authentication.
+
+#### FindProjectByNameTool: Detailed Usage
+
+This tool finds projects by name across all your Asana workspaces.
+
+```python
+from src.asana_manager.tools.asana_tools import FindProjectByNameTool
+
+# Create the tool instance
+find_project_tool = FindProjectByNameTool()
+
+# Find projects matching a name (case-insensitive, partial matches work)
+result = find_project_tool._run(
+    project_name="Marketing Campaign",  # Required: The name to search for
+    workspace_gid=None  # Optional: Specific workspace to search in
+)
+
+# Process the results
+if "matching_projects" in result:
+    projects = result["matching_projects"]
+    print(f"Found {len(projects)} matching projects:")
+    for i, project in enumerate(projects):
+        print(f"{i+1}. {project['name']} (GID: {project['gid']})")
+        
+        # If you need a specific project GID for other operations
+        project_gid = projects[0]["gid"]
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### ListWorkspacesTool: Detailed Usage
+
+Get all workspaces accessible to your Asana account.
+
+```python
+from src.asana_manager.tools.asana_tools import ListWorkspacesTool
+
+# Create the tool instance
+workspaces_tool = ListWorkspacesTool()
+
+# List all accessible workspaces
+result = workspaces_tool._run()
+
+# Process the results
+if "data" in result:
+    workspaces = result["data"]
+    print(f"Found {len(workspaces)} workspaces:")
+    for i, workspace in enumerate(workspaces):
+        print(f"{i+1}. {workspace['name']} (GID: {workspace['gid']})")
+        
+        # Remember the first workspace GID for other operations
+        if i == 0:
+            first_workspace_gid = workspace["gid"]
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### ListTeamsTool: Detailed Usage
+
+Get all teams in a workspace.
+
+```python
+from src.asana_manager.tools.asana_tools import ListTeamsTool
+
+# Create the tool instance
+teams_tool = ListTeamsTool()
+
+# List teams in a workspace
+result = teams_tool._run(
+    workspace_gid="1234567890"  # Optional: Uses default if not provided
+)
+
+# Process the results
+if "data" in result:
+    teams = result["data"]
+    print(f"Found {len(teams)} teams:")
+    for i, team in enumerate(teams):
+        print(f"{i+1}. {team['name']} (GID: {team['gid']})")
+        
+        # Remember the first team GID for project creation
+        if i == 0:
+            first_team_gid = team["gid"]
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### CreateProjectTool: Detailed Usage
+
+Create a new project in Asana.
+
+```python
+from src.asana_manager.tools.asana_tools import CreateProjectTool
+
+# Create the tool instance
+create_project_tool = CreateProjectTool()
+
+# Create a new project
+result = create_project_tool._run(
+    name="New Project",  # Required: Project name
+    notes="Project created via API",  # Optional: Project description
+    workspace_gid=None,  # Optional: Uses default if not provided
+    team_gid=None  # Optional: Uses default if not provided
+)
+
+# Process the results
+if "data" in result:
+    project = result["data"]
+    print(f"Created project: {project['name']} (GID: {project['gid']})")
+    
+    # Remember the project GID for adding tasks
+    project_gid = project["gid"]
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### CreateTaskTool: Detailed Usage
+
+Add a task to an existing project.
+
+```python
+from src.asana_manager.tools.asana_tools import CreateTaskTool
+
+# Create the tool instance
+create_task_tool = CreateTaskTool()
+
+# Add a task to a project
+result = create_task_tool._run(
+    project_gid="1234567890",  # Required: Project GID
+    name="Implement feature X",  # Required: Task name
+    notes="This is a high priority task",  # Optional: Task description
+    assignee=None  # Optional: User GID to assign task
+)
+
+# Process the results
+if "data" in result:
+    task = result["data"]
+    print(f"Created task: {task['name']} (GID: {task['gid']})")
+    
+    # Remember the task GID for subtasks or setting due dates
+    task_gid = task["gid"]
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### AssignTaskTool: Detailed Usage
+
+Assign a task to a user.
+
+```python
+from src.asana_manager.tools.asana_tools import AssignTaskTool, ListUsersTool
+
+# First, get users to find the assignee
+users_tool = ListUsersTool()
+users_result = users_tool._run(workspace_gid="1234567890")
+
+# Find the user to assign to
+user_gid = None
+if "data" in users_result:
+    for user in users_result["data"]:
+        if "John Doe" in user["name"]:
+            user_gid = user["gid"]
+            break
+
+# Now assign the task
+if user_gid:
+    assign_tool = AssignTaskTool()
+    result = assign_tool._run(
+        task_gid="1234567890",  # Required: Task GID
+        assignee=user_gid  # Required: User GID
+    )
+    
+    # Process the results
+    if "data" in result:
+        print(f"Task assigned successfully to user {user_gid}")
+    else:
+        print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### SetDueDateTool: Detailed Usage
+
+Set a due date for a task.
+
+```python
+from src.asana_manager.tools.asana_tools import SetDueDateTool
+import datetime
+
+# Create the tool instance
+due_date_tool = SetDueDateTool()
+
+# Calculate due date (2 weeks from now)
+today = datetime.datetime.now()
+due_date = today + datetime.timedelta(days=14)
+due_date_str = due_date.strftime("%Y-%m-%d")
+
+# Set the due date
+result = due_date_tool._run(
+    task_gid="1234567890",  # Required: Task GID
+    due_date=due_date_str  # Required: Due date in YYYY-MM-DD format
+)
+
+# Process the results
+if "data" in result:
+    task = result["data"]
+    print(f"Set due date for task '{task['name']}' to {task['due_on']}")
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### BrowseProjectTool: Detailed Usage
+
+View complete project details including sections and tasks.
+
+```python
+from src.asana_manager.tools.asana_tools import BrowseProjectTool
+
+# Create the tool instance
+browse_tool = BrowseProjectTool()
+
+# Get project details, sections, and tasks
+result = browse_tool._run(
+    project_gid="1234567890"  # Required: Project GID
+)
+
+# Process the results (with proper handling of Asana API response structure)
+if "project" in result and "tasks" in result:
+    # Handle nested 'data' field in Asana API responses
+    project = result["project"].get("data", result["project"])
+    sections = result["sections"].get("data", [])
+    tasks = result["tasks"].get("data", [])
+    
+    print(f"Project: {project['name']}")
+    print(f"Description: {project.get('notes', 'No description')}")
+    print(f"Tasks ({len(tasks)}):")
+    
+    for i, task in enumerate(tasks):
+        print(f"{i+1}. {task['name']} (GID: {task['gid']})")
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### CompareTasksWithDocumentationTool: Detailed Usage
+
+This powerful tool compares tasks in an Asana project with items in a markdown document.
+
+```python
+from src.asana_manager.tools.asana_tools import CompareTasksWithDocumentationTool
+
+# Create the tool instance
+comparison_tool = CompareTasksWithDocumentationTool()
+
+# Compare project with documentation (multiple template options)
+result = comparison_tool._run(
+    project_gid="1234567890",  # Required: Project GID (recommended method for direct access)
+    markdown_file_path="/path/to/doc.md",  # Required: Path to markdown file
+    template="standard",  # Optional: "standard", "headings", or "custom"
+    heading_level=3,  # Optional: For "headings" template, which level to use
+    pattern=r"Task: (.+?) \| Status: (.+?)$",  # Optional: For "custom" template
+    section_filter="Implementation Checklist"  # Optional: Only look at specific section
+)
+
+# Process the results - this has many properties
+if "error" not in result:
+    # Statistics
+    print(f"Asana tasks: {result['asana_tasks_count']}")
+    print(f"Document items: {result['checklist_items_count']}")
+    
+    # Missing items
+    print(f"\nMissing in Asana ({len(result['missing_in_asana'])}):")
+    for item in result['missing_in_asana']:
+        print(f"- {item['text']} (Completed: {item['completed']})")
+    
+    print(f"\nMissing in documentation ({len(result['missing_in_doc'])}):")
+    for task in result['missing_in_doc']:
+        print(f"- {task['name']} (Completed: {task['completed']})")
+    
+    # Matching items
+    print(f"\nMatches ({len(result['matches'])}):")
+    for match in result['matches']:
+        print(f"- Asana: '{match['asana_task']['name']}' ↔ Doc: '{match['doc_item']['text']}'")
+        print(f"  Similarity: {match['similarity']:.2f}")
+else:
+    print(f"Error: {result['error']}")
+```
+
+#### MarkdownToAsanaTool: Detailed Usage
+
+This tool creates an Asana project from a markdown file with sections and tasks.
+
+```python
+from src.asana_manager.tools.markdown_to_asana import MarkdownToAsanaTool
+
+# Create the tool instance
+md_to_asana_tool = MarkdownToAsanaTool()
+
+# Create project from markdown
+result = md_to_asana_tool._run(
+    markdown_file_path="/path/to/project.md",  # Required: Markdown file path
+    project_name="Project from Documentation",  # Required: Name for the new project
+    workspace_gid=None,  # Optional: Uses default if not provided
+    team_gid=None  # Optional: Uses default if not provided
+)
+
+# Process the results
+if "success" in result and result["success"]:
+    print(f"Created project: {result['project_name']}")
+    print(f"Project URL: {result['project_url']}")
+    print("\nStatistics:")
+    for key, value in result["statistics"].items():
+        print(f"- {key.replace('_', ' ').title()}: {value}")
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+#### CreateTemplateMdFileTool: Detailed Usage
+
+This tool generates template markdown files for Asana projects.
+
+```python
+from src.asana_manager.tools.markdown_to_asana import CreateTemplateMdFileTool
+
+# Create the tool instance
+template_tool = CreateTemplateMdFileTool()
+
+# Generate template file
+result = template_tool._run(
+    output_path="/path/to/output.md",  # Required: Where to save template
+    project_type="software"  # Optional: "generic", "software", or "marketing"
+)
+
+# Process the results
+if "success" in result and result["success"]:
+    print(f"Created template at: {result['file_path']}")
+    print(f"Project type: {result['project_type']}")
+else:
+    print(f"Error: {result.get('error', 'Unknown error')}")
+```
+
+### Error Handling and Debugging Tips
+
+When using these tools, here are some common errors and solutions:
+
+1. **ModuleNotFoundError: No module named 'crewai'**:
+   ```
+   ModuleNotFoundError: No module named 'crewai'
+   ```
+   **Solution**: You forgot to activate the virtual environment! This is the most common error.
+   ```bash
+   source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+   ```
+   ALWAYS run this command first before ANY operation with these tools.
+
+2. **API Token Errors**:
+   ```
+   {"errors":[{"message":"Not Authorized"}]}
+   ```
+   **Solution**: Your Asana API token is not set or is invalid:
+   ```bash
+   # Check if token is set
+   echo $ASANA_API_TOKEN
+   
+   # Set it if needed
+   export ASANA_API_TOKEN="your_personal_access_token"
+   ```
+
+3. **Project/Workspace Not Found**:
+   ```
+   {"errors":[{"message":"project: Unknown object"}]}
+   ```
+   **Solution**: Verify the GID exists and you have access to it. Use `list_projects.py` to see available projects.
+
+4. **Path Errors**:
+   ```
+   FileNotFoundError: [Errno 2] No such file or directory
+   ```
+   **Solution**: Make sure you're in the correct directory. Change to the project root:
+   ```bash
+   cd /Users/aniruddhasen/Projects/CrewAI/asana_manager
+   ```
+
+5. **Import Errors in Your Own Scripts**:
+   ```
+   ImportError: attempted relative import with no known parent package
+   ```
+   **Solution**: Include the proper Python path in your scripts:
+   ```python
+   import sys
+   from pathlib import Path
+   sys.path.append(str(Path(__file__).parent.parent))
+   ```
+
+#### ListAllProjectsTool: Detailed Usage
+
+This tool lists all projects across all your Asana workspaces with a single command.
+
+```python
+from src.asana_manager.tools.list_all_projects import ListAllProjectsTool
+
+# Create the tool instance
+list_tool = ListAllProjectsTool()
+
+# List all projects across all workspaces
+result = list_tool.run()
+
+# Optionally, specify a workspace and output format
+result = list_tool.run(
+    workspace_gid="1234567890",  # Optional: Only list projects in this workspace
+    output_format="json"  # Optional: "text" (default) or "json"
+)
+
+# If using json format, you can process the results programmatically
+if result.get("format") == "json":
+    workspaces = result.get("workspaces", [])
+    for workspace in workspaces:
+        print(f"Workspace: {workspace['name']}")
+        for project in workspace.get('projects', []):
+            print(f"  - {project['name']} (GID: {project['gid']})")
+```
+
+#### ListAllProjectsTool: Standalone Usage
+
+The standalone script provides a simple command-line interface to list all Asana projects.
+
+```bash
+# REQUIRED FIRST STEP: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+
+# List all projects across all workspaces
+python list_projects.py
+
+# List projects in a specific workspace
+python list_projects.py --workspace 1234567890
+
+# Get JSON output
+python list_projects.py --format json
+```
+
+#### FindProjectByNameTool: Standalone Usage
+
+The standalone script provides a simple command-line interface to find Asana projects by name.
+
+```bash
+# REQUIRED FIRST STEP: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+
+# Find projects by name
+python find_project.py --project-name "Marketing Campaign"
+
+# Find in a specific workspace
+python find_project.py --project-name "Marketing Campaign" --workspace-gid 1234567890
+
+# Get JSON output
+python find_project.py --project-name "Marketing Campaign" --output-format json
+```
+
+#### BrowseProjectTool: Standalone Usage
+
+The standalone script lets you browse project details including sections and tasks. It includes robust error handling and supports the Asana API response structure.
+
+```bash
+# REQUIRED FIRST STEP: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+
+# Browse a project (provide the project GID)
+python browse_project.py --project-gid 1234567890
+
+# Get JSON output
+python browse_project.py --project-gid 1234567890 --output-format json
+```
+
+The script will show:
+- Project details (name, GID, notes)
+- All sections in the project
+- All tasks organized by section
+- Task details including completion status, assignee, and due date
+
+The script handles Asana's nested data structure and provides detailed debug output if there are any issues with the API response format.
+
+#### ListWorkspacesAndTeamsTool: Standalone Usage
+
+This script provides a simple way to list all workspaces and teams.
+
+```bash
+# REQUIRED FIRST STEP: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+
+# List all workspaces and teams
+python list_workspaces_and_teams.py
+
+# List teams in a specific workspace
+python list_workspaces_and_teams.py --workspace-gid 1234567890
+
+# List only workspaces
+python list_workspaces_and_teams.py --list-type workspaces
+
+# List only teams
+python list_workspaces_and_teams.py --list-type teams --workspace-gid 1234567890
+
+# Get JSON output
+python list_workspaces_and_teams.py --output-format json
+```
+
+#### CreateProjectTool: Standalone Usage
+
+Create a new Asana project using the command-line interface.
+
+```bash
+# REQUIRED FIRST STEP: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+
+# Create a new project
+python create_project.py --name "New Project"
+
+# Create with notes
+python create_project.py --name "New Project" --notes "Project description"
+
+# Create in specific workspace and team
+python create_project.py --name "New Project" --workspace-gid 1234567890 --team-gid 0987654321
+
+# Get JSON output
+python create_project.py --name "New Project" --output-format json
+```
+
+#### Using the Main Menu
+
+The main.py script provides a comprehensive menu interface to access all Asana Manager tools from a single command. This is the recommended way for AI agents to interact with the Asana Manager tools:
+
+```bash
+# REQUIRED FIRST STEP: Activate the virtual environment
+source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+
+# Change to the project directory
+cd /Users/aniruddhasen/Projects/CrewAI/asana_manager
+
+# Run the main menu
+python -m src.asana_manager.main
+```
+
+The menu offers the following options:
+
+```
+Menu options:
+1. Create a new Asana project using CrewAI workflow
+2. Compare Pharmacist Operations Module with documentation
+3. List all projects across all workspaces
+4. Find a project by name
+5. Browse project details
+6. List workspaces and teams
+7. Create project (direct tool)
+8. Create project from markdown file
+```
+
+**Detailed Menu Option Descriptions:**
+
+1. **Create a new Asana project using CrewAI workflow**
+   - Uses the full CrewAI workflow to interactively create a project with tasks
+   - Prompts for project name and three initial tasks
+   - Handles all Asana API interactions automatically
+   - Optimal for creating structured projects quickly
+
+2. **Compare Pharmacist Operations Module with documentation**
+   - Compares an existing Asana project with a markdown checklist
+   - Shows missing tasks and completion status
+   - Specifically configured for the Pharmacist Operations Module
+   - Equivalent to running `compare_project.py` with preset parameters
+
+3. **List all projects across all workspaces**
+   - Shows all Asana projects in all accessible workspaces
+   - Displays project names, GIDs, and workspace information
+   - Same functionality as running `list_projects.py` directly
+   - Useful for finding project GIDs needed by other tools
+
+4. **Find a project by name**
+   - Searches for projects by name in all workspaces
+   - Similar to running `find_project.py` directly
+   - Displays matching projects with GIDs and workspace details
+   - Use when you need to find a specific project by its name
+
+5. **Browse project details**
+   - Shows detailed information about a specific project
+   - Requires the project GID (get it from options 3 or 4 first)
+   - Displays sections, tasks, assignees, due dates, and completion status
+   - Same functionality as running `browse_project.py` directly
+
+6. **List workspaces and teams**
+   - Shows all Asana workspaces and teams you have access to
+   - Displays GIDs for both workspaces and teams
+   - Useful for getting the workspace/team GIDs needed for project creation
+   - Same functionality as running `list_workspaces_and_teams.py` directly
+
+7. **Create project (direct tool)**
+   - Creates a new project using the direct Asana API tool
+   - Simple project creation without additional tasks or workflow
+   - Same functionality as running `create_project.py` directly
+   - Good for quickly creating an empty project
+
+8. **Create project from markdown file**
+   - Converts a markdown document into an Asana project
+   - Creates tasks, subtasks, and sections based on markdown structure
+   - Same functionality as running `create_project_from_markdown.py` directly
+   - Great for turning documentation into actionable projects
+
+To use the menu, simply enter the number of the desired option when prompted. The menu will then guide you through any additional inputs needed for the selected action.
+
+**Recommended Main Menu Workflow for AI Agents:**
+
+1. For most tasks, start by accessing the main menu system:
+   ```bash
+   source /Users/aniruddhasen/Projects/CrewAI/venv/bin/activate
+   cd /Users/aniruddhasen/Projects/CrewAI/asana_manager
+   python -m src.asana_manager.main
+   ```
+
+2. For project exploration, follow this sequence:
+   - First use option 3 (List all projects) to see available projects and their GIDs
+   - Then use option 5 (Browse project details) with a specific GID to examine tasks
+
+3. For creating new projects:
+   - If you need a sophisticated project with tasks/sections, use option 1
+   - If you already have a markdown document, use option 8 
+   - For a simple empty project, use option 7
+
+4. Remember that option 2 is specifically configured for the Pharmacist Operations Module and uses a hardcoded path for documentation
+
+### Combining Multiple Tools
+
+For complex workflows, you can combine multiple tools:
+
+```python
+# Example: Find a project, add tasks, and compare with documentation
+from src.asana_manager.tools.asana_tools import (
+    FindProjectByNameTool, CreateTaskTool, CompareTasksWithDocumentationTool
+)
+
+# 1. Find the project
+find_tool = FindProjectByNameTool()
+projects = find_tool._run("Marketing Campaign")
+
+if "matching_projects" in projects and len(projects["matching_projects"]) > 0:
+    project_gid = projects["matching_projects"][0]["gid"]
+    
+    # 2. Add a task to the project
+    task_tool = CreateTaskTool()
+    task = task_tool._run(
+        project_gid=project_gid,
+        name="Review campaign metrics",
+        notes="Compare with Q3 baseline"
+    )
+    
+    # 3. Compare with documentation
+    compare_tool = CompareTasksWithDocumentationTool()
+    comparison = compare_tool._run(
+        project_gid=project_gid,
+        markdown_file_path="/path/to/marketing_plan.md"
+    )
+    
+    # Process the comparison results
+    # ...
+```
+
 ## Latest Enhancements Summary (March 2025)
 
 Over the course of our work, we've implemented several critical enhancements to the Plazza Analytics system:

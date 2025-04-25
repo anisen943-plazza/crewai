@@ -1,0 +1,23 @@
+[project]
+name = "asana_manager"
+version = "0.1.0"
+description = "asana_manager using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "crewai[tools]>=0.102.0,<1.0.0"
+]
+
+[project.scripts]
+asana_manager = "asana_manager.main:run"
+run_crew = "asana_manager.main:run"
+train = "asana_manager.main:train"
+replay = "asana_manager.main:replay"
+test = "asana_manager.main:test"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "crew"

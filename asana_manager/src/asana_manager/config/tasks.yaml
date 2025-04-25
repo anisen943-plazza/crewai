@@ -1,0 +1,38 @@
+initialize_asana_project:
+  description: >
+    Follow these steps to create a new Asana project:
+    1. First list workspaces to identify the workspace_gid
+    2. Then list teams in that workspace to get a team_gid (required for creating projects)
+    3. Create a new Asana project titled "{project_name}" using the team_gid
+    4. Add three tasks to the project: {task1}, {task2}, and {task3}
+    5. Set deadlines for the tasks: 3, 7, and 10 days from today
+
+    Your final answer MUST include:
+    - The workspace and team used
+    - The project ID and details
+    - List of created tasks with due dates
+  expected_output: >
+    Detailed summary of the created project and tasks, including all IDs for reference.
+  agent: project_manager
+
+compare_project_with_documentation:
+  description: >
+    Compare the tasks in the "Pharmacist Operations Module" Asana project with the implementation checklist in the markdown file.
+    
+    Follow these steps:
+    1. First list workspaces to identify the workspace_gid
+    2. Find the project with the name "Pharmacist Operations Module" in the workspace
+    3. Use the CompareTasksWithDocumentationTool to compare the tasks in the project with the checklist items in the markdown file at "/Users/aniruddhasen/Projects/Plazza_pharmacist_admin/documentation/Pharmacist_Operations_Combined.md"
+    4. Create a comprehensive report that shows:
+       - Tasks that exist in Asana but are missing from the documentation
+       - Checklist items in the documentation that are not yet created in Asana
+       - Statistics on completion status (completed tasks vs. checked items in documentation)
+    
+    Your final answer MUST include:
+    - The project ID and name
+    - Statistics on total tasks and checklist items
+    - A formatted list of missing tasks in both directions
+    - Recommendations for synchronizing the project with documentation
+  expected_output: >
+    Detailed comparison report showing differences between Asana tasks and documentation checklist items.
+  agent: project_manager
