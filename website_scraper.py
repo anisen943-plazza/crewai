@@ -44,7 +44,7 @@ def main():
     # Get URL and output filename from command line arguments
     if len(sys.argv) != 3:
         print(f"Usage: {sys.argv[0]} <url> <output_filename>")
-        print(f"Example: {sys.argv[0]} https://api.slack.com Slack_API_Documentation.md")
+        print(f"Example: {sys.argv[0]} https://razorpay.com/docs/api/ Razorpay_API_Documentation.md")
         sys.exit(1)
         
     url = sys.argv[1]
