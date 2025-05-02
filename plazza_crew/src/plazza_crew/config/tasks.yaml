@@ -1,0 +1,19 @@
+handle_user_query_task:
+  description: >
+    You received this question from the user: "{user_question}"
+    If it requires a database query, rephrase it as a concrete analytical goal
+    and delegate it to the PostgresQueryAgent.
+  expected_output: >
+    A clearly rephrased task to be performed using SQL, passed to the query agent.
+
+answer_from_db_task:
+  description: >
+    Given the following request: "{db_goal}"
+    Use the schema below to decide which tables and fields to query.
+
+    Schema:
+    {schema}
+
+    Generate a SQL query, run it using your tool, and summarize the result.
+  expected_output: >
+    The final result must include the output as expected by the user and a simple language summary of the method used to obtain it.
